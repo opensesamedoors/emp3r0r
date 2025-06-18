@@ -32,6 +32,19 @@ curl -sSL https://raw.githubusercontent.com/jm33-m0/emp3r0r/refs/heads/v3/instal
 emp3r0r server --c2-hosts 'your.domain.com' --port 12345 --operators 2
 ```
 
+This command initiates emp3r0r with:
+
+- HTTP2/TLS agent listener on random port with valid hostname in TLS certificate
+- WireGuard operator service on specified port (12345)
+- Operator mTLS server on `wg_ip:12346`
+- Pre-registered operator slots (2 in this example)
+
+The server displays:
+
+1. **WireGuard Server Configuration** - server IP, port, and public key
+2. **WireGuard Operator Configurations** - each operator's credentials
+3. **Client Connection Commands** - ready-to-use commands
+
 #### 2️⃣ Connect as Operator
 
 Copy the generated connection command and replace `<C2_PUBLIC_IP>` with your server's IP:
@@ -39,6 +52,14 @@ Copy the generated connection command and replace `<C2_PUBLIC_IP>` with your ser
 ```bash
 emp3r0r client --c2-port 12345 --server-wg-key 'key...' --c2-host your.domain.com
 ```
+
+**Connection Process:**
+
+- Each operator receives a unique, pre-configured connection command
+- For local testing: use `127.0.0.1` as the C2 host
+- For remote connections: replace `<C2_PUBLIC_IP>` with your server's public IP or domain
+- System prompts for operator's private key (displayed in server configuration)
+- WireGuard connectivity is automatically configured
 
 #### 3️⃣ Generate Agent Payloads
 
@@ -189,39 +210,6 @@ Every contribution, no matter the size, makes a difference in keeping emp3r0r ac
 
 ---
 
-## 🔧 Advanced Configuration
-
-### Server Configuration
-
-```bash
-emp3r0r server --c2-hosts '192.168.200.3' --port 12345 --operators 3
-```
-
-This command initiates emp3r0r with:
-
-- HTTP2/TLS agent listener on random port with valid hostname in TLS certificate
-- WireGuard operator service on specified port
-- Operator mTLS server on `wg_ip:12346`
-- Pre-registered operator slots
-
-The server displays:
-
-1. **WireGuard Server Configuration** - server IP, port, and public key
-2. **WireGuard Operator Configurations** - each operator's credentials
-3. **Client Connection Commands** - ready-to-use commands
-
-### Operator Connection Details
-
-**Connection Process:**
-
-- Each operator receives a unique, pre-configured connection command
-- For local testing: use `127.0.0.1` as the C2 host
-- For remote connections: replace `<C2_PUBLIC_IP>` with your server's public IP or domain
-- System prompts for operator's private key (displayed in server configuration)
-- WireGuard connectivity is automatically configured
-
----
-
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
