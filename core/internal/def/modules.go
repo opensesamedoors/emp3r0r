@@ -218,6 +218,11 @@ var Modules = map[string]*ModuleConfig{
 				Desc: "Path to the shared library (.so) file to inject (use 'put' command to upload first)",
 				Val:  "",
 			},
+			"target_path": &ModOption{
+				Name: "target_path",
+				Desc: "Target path where the library should be loaded on the target system (including filename). If empty, uses random path and filename",
+				Val:  "",
+			},
 		},
 		AgentConfig: AgentModuleConfig{
 			Exec:          "built-in",

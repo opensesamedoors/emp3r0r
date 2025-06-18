@@ -273,16 +273,17 @@ func C2Commands() *cobra.Command {
 	}
 	rootCmd.AddCommand(screenshotCmd)
 
-	// !elf_patch --elf_path <path> --so_path <so_path>
+	// !elf_patch --elf_path <path> --so_path <so_path> [--target_path <target_path>]
 	elfPatchCmd := &cobra.Command{
 		Use:     def.C2CmdElfPatch,
 		Short:   "Patch ELF file to load SO library",
-		Example: "!elf_patch --elf_path <path> --so_path <so_path>",
+		Example: "!elf_patch --elf_path <path> --so_path <so_path> [--target_path <target_path>]",
 		GroupID: "linux",
 		Run:     runElfPatchLinux,
 	}
 	elfPatchCmd.Flags().StringP("elf_path", "e", "", "Path to ELF file to patch")
 	elfPatchCmd.Flags().StringP("so_path", "s", "", "Path to SO file to inject (will be uploaded)")
+	elfPatchCmd.Flags().StringP("target_path", "t", "", "Target path where the library should be loaded (including filename). If empty, uses random path and filename")
 	rootCmd.AddCommand(elfPatchCmd)
 
 	return rootCmd

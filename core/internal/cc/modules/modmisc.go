@@ -47,6 +47,11 @@ func moduleElfPatch() {
 		logging.Errorf("Option 'so_path' not found")
 		return
 	}
+	targetPathOpt, ok := live.ActiveModule.Options["target_path"]
+	if !ok {
+		logging.Errorf("Option 'target_path' not found")
+		return
+	}
 	if soPathOpt.Val == "" {
 		logging.Errorf("so_path cannot be empty. Please specify the path to the shared library file")
 		return
@@ -57,6 +62,12 @@ func moduleElfPatch() {
 	}
 
 	cmd := fmt.Sprintf("%s --elf_path %s --so_path %s", def.C2CmdElfPatch, elfPathOpt.Val, soPathOpt.Val)
+
+	// Add target_path if specified
+	if targetPathOpt.Val != "" {
+		cmd += fmt.Sprintf(" --target_path %s", targetPathOpt.Val)
+	}
+
 	err := CmdSender(cmd, "", live.ActiveAgent.Tag)
 	if err != nil {
 		logging.Errorf("SendCmd: %v", err)
