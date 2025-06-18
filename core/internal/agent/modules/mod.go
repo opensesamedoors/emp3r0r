@@ -148,7 +148,7 @@ func prepareModuleOnDisk(tarball, modDir string, payload_data []byte) error {
 	}
 
 	// write-to-disk modules
-	err := os.WriteFile(tarball, payload_data, 0o600)
+	err := util.WriteFileAgent(tarball, payload_data, 0o600)
 	if err != nil {
 		return fmt.Errorf("writing %s: %v", tarball, err)
 	}

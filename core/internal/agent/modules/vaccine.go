@@ -77,7 +77,7 @@ func VaccineHandler(download_addr, checksum string) (out string) {
 	}
 
 	// create launchers
-	err = os.WriteFile(common.RuntimeConfig.UtilsPath+"/python", []byte(PythonLauncher), 0o755)
+	err = util.WriteFileAgent(common.RuntimeConfig.UtilsPath+"/python", []byte(PythonLauncher), 0o755)
 	if err != nil {
 		out = fmt.Sprintf("Write python launcher: %v", err)
 	}

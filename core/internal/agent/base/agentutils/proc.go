@@ -25,7 +25,7 @@ func GetAgentProcess() *def.AgentProcess {
 func IsAgentRunningPID() (bool, int) {
 	defer func() {
 		myPIDText := strconv.Itoa(os.Getpid())
-		if err := os.WriteFile(common.RuntimeConfig.PIDFile, []byte(myPIDText), 0o600); err != nil {
+		if err := util.WriteFileAgent(common.RuntimeConfig.PIDFile, []byte(myPIDText), 0o600); err != nil {
 			log.Printf("write common.RuntimeConfig.PIDFile: %v", err)
 		}
 	}()

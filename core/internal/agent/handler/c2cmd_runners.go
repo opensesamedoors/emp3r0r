@@ -392,7 +392,7 @@ func runMemDump(cmd *cobra.Command, args []string) {
 		}
 		for base, data := range dumpedData {
 			filePath := fmt.Sprintf("%s/%d_%d.bin", outPath, pid, base)
-			err = os.WriteFile(filePath, data, 0600)
+			err = util.WriteFileAgent(filePath, data, 0600)
 			if err != nil {
 				c2transport.C2RespPrintf(cmd, "Error: %v\n", err)
 				return

@@ -70,7 +70,7 @@ func DownloadViaC2(file_to_download, path, checksum string) (data []byte, err er
 
 	// create file.downloading to prevent racing downloads
 	if !retData {
-		os.Create(lock)
+		util.CreateFileAgent(lock)
 	}
 
 	// if no path specified

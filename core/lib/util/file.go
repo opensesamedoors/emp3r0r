@@ -397,3 +397,90 @@ func GetWritablePaths(root_path string, depth, max int) ([]string, error) {
 
 	return writablePaths, nil
 }
+
+// Agent-specific file operations for centralized control
+
+// WriteFileAgent is a centralized file writing function for agent operations.
+// This function wraps all file writing operations to allow for future modifications
+// such as encryption, steganography, or other security enhancements.
+func WriteFileAgent(filename string, data []byte, perm os.FileMode) error {
+	// Future enhancements can be added here:
+	// - File encryption before writing
+	// - Steganography to hide files
+	// - Anti-forensics techniques
+	// - Atomic writes with temporary files
+	// - Logging for debugging (but be careful with OpSec)
+
+	logging.Debugf("Agent: Writing %d bytes to %s with permissions %o", len(data), filename, perm)
+
+	// Currently just wraps os.WriteFile, but can be enhanced later
+	return os.WriteFile(filename, data, perm)
+}
+
+// CreateFileAgent is a centralized file creation function for agent operations.
+// This function wraps file creation operations to allow for future modifications.
+func CreateFileAgent(filename string) (*os.File, error) {
+	logging.Debugf("Agent: Creating file %s", filename)
+
+	// Future enhancements can be added here:
+	// - Hidden file attributes
+	// - Special file creation flags
+	// - Anti-forensics techniques
+
+	return os.Create(filename)
+}
+
+// OpenFileAgent is a centralized file opening function for agent operations.
+// This function wraps file opening operations to allow for future modifications.
+func OpenFileAgent(filename string, flag int, perm os.FileMode) (*os.File, error) {
+	logging.Debugf("Agent: Opening file %s with flags %d and permissions %o", filename, flag, perm)
+
+	// Future enhancements can be added here:
+	// - Special file opening flags
+	// - Anti-forensics techniques
+	// - File locking mechanisms
+
+	return os.OpenFile(filename, flag, perm)
+}
+
+// AppendToFileAgent is a centralized file appending function for agent operations.
+// This function wraps file appending operations to allow for future modifications.
+func AppendToFileAgent(filename string, data []byte) error {
+	logging.Debugf("Agent: Appending %d bytes to %s", len(data), filename)
+
+	// Future enhancements can be added here:
+	// - Encryption before appending
+	// - Anti-forensics techniques
+
+	f, err := OpenFileAgent(filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	if _, err = f.Write(data); err != nil {
+		return err
+	}
+	return nil
+}
+
+// AppendTextToFileAgent is a centralized text appending function for agent operations.
+// This function wraps text appending operations to allow for future modifications.
+func AppendTextToFileAgent(filename string, text string) error {
+	logging.Debugf("Agent: Appending text to %s", filename)
+
+	// Future enhancements can be added here:
+	// - Encryption before appending
+	// - Anti-forensics techniques
+
+	f, err := OpenFileAgent(filename, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o600)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	if _, err = f.WriteString(text); err != nil {
+		return err
+	}
+	return nil
+}
