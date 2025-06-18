@@ -1,13 +1,35 @@
-# Screenshots and Video Demos
+<div align="center">
 
-<https://github.com/jm33-m0/emp3r0r/assets/10167884/c7532c4d-8a6f-4a91-b52c-d7df4c80ba63>
+# 📸 Screenshots and Video Demos
 
-<!-- https://user-images.githubusercontent.com/10167884/155106403-ca6bd763-7f09-4aae-adc3-67f7a36f99ad.mp4 -->
+**Visual guide to emp3r0r's capabilities and features**
 
-![image](https://user-images.githubusercontent.com/10167884/162661854-a52fc5bc-b322-4099-8a06-8f2aaa76b3ea.png)
+---
 
-![image](https://user-images.githubusercontent.com/10167884/163743855-6639c6aa-9b3a-4891-8845-1505236ac026.png)
+</div>
 
-![image](https://user-images.githubusercontent.com/10167884/158535621-6c0ecbc5-47cb-4ad2-bbf6-4e625eef1f84.png)
+## 🎬 Video Demonstrations
 
-![c2](./img/c2transports.png)
+### SSH Harvester Module
+
+https://github.com/user-attachments/assets/e735b325-d9ad-43bd-b34d-79f395cc4b8f
+
+---
+
+## 📷 Screenshots
+
+### Interface and Setup
+
+![emp3r0r Interface](https://user-images.githubusercontent.com/10167884/162661854-a52fc5bc-b322-4099-8a06-8f2aaa76b3ea.png)
+
+### Agent Management
+
+![Agent Management](https://user-images.githubusercontent.com/10167884/163743855-6639c6aa-9b3a-4891-8845-1505236ac026.png)
+
+### Features Overview
+
+![Features Overview](https://user-images.githubusercontent.com/10167884/158535621-6c0ecbc5-47cb-4ad2-bbf6-4e625eef1f84.png)
+
+### C2 Transport Methods
+
+![C2 Transport Methods](./img/c2transports.png)

@@ -9,6 +9,14 @@ body:
       value: |
         Thanks for helping improve emp3r0r's documentation! Clear documentation helps everyone.
 
+        ---
+
+        💖 **Support the Project**: If emp3r0r has been helpful to you, consider [sponsoring the project](https://github.com/sponsors/jm33-m0) to support ongoing development and maintenance!
+
+        📚 **Need faster documentation updates?** Sponsors get priority documentation improvements and quicker responses!
+
+        ⚠️ **Important Notice**: Non-critical documentation requests may be ignored or deprioritized due to limited volunteer time. For guaranteed support and timely responses, please consider [sponsoring the project](https://github.com/sponsors/jm33-m0) or reaching out for paid support options.
+
   - type: dropdown
     id: doc-type
     attributes:
