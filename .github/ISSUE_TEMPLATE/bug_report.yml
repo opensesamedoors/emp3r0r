@@ -61,9 +61,7 @@ body:
         ```bash
         uname -a
         cat /etc/os-release 2>/dev/null || sw_vers 2>/dev/null
-        uname -m
         go version
-        ./emp3r0r -version 2>/dev/null || ./core/emp3r0r -version 2>/dev/null
         ```
 
         **For Windows:**
@@ -71,7 +69,6 @@ body:
         systeminfo | findstr /B /C:"OS Name" /C:"OS Version"
         echo %PROCESSOR_ARCHITECTURE%
         go version
-        emp3r0r.exe -version
         ```
 
         **Additional info (if relevant):** Network setup, virtualization platform, container runtime
