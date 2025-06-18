@@ -54,31 +54,28 @@ body:
     id: environment
     attributes:
       label: Environment
-      description: Please run the commands below and paste the output
-      placeholder: |
-        Run these commands and paste the output:
+      description: |
+        Please run the following commands and paste the output to provide reliable version information:
 
+        **For Unix/Linux/macOS:**
         ```bash
-        # OS and kernel information
         uname -a
-
-        # OS release information
-        cat /etc/os-release 2>/dev/null || sw_vers 2>/dev/null || systeminfo | findstr /B /C:"OS Name" /C:"OS Version"
-
-        # Architecture
+        cat /etc/os-release 2>/dev/null || sw_vers 2>/dev/null
         uname -m
-
-        # Go version (if building from source)
         go version
-
-        # emp3r0r version
-        ./emp3r0r -version 2>/dev/null || ./core/emp3r0r -version 2>/dev/null || echo "emp3r0r version: [paste version here]"
-
-        # Additional info (if relevant):
-        # - Network setup: 
-        # - Virtualization: 
-        # - Container runtime: docker version / podman version
+        ./emp3r0r -version 2>/dev/null || ./core/emp3r0r -version 2>/dev/null
         ```
+
+        **For Windows:**
+        ```cmd
+        systeminfo | findstr /B /C:"OS Name" /C:"OS Version"
+        echo %PROCESSOR_ARCHITECTURE%
+        go version
+        emp3r0r.exe -version
+        ```
+
+        **Additional info (if relevant):** Network setup, virtualization platform, container runtime
+      placeholder: "Paste command output here..."
     validations:
       required: true
 
@@ -95,12 +92,13 @@ body:
     id: steps-to-reproduce
     attributes:
       label: Steps to Reproduce
-      description: Detailed steps to reproduce the behavior
+      description: |
+        Please provide detailed, numbered steps to reproduce the behavior. Be as specific as possible.
+        Include commands, configuration details, and any relevant setup information.
       placeholder: |
         1. Start emp3r0r with configuration...
         2. Run command...
         3. Observe that...
-        4. Expected vs actual behavior...
     validations:
       required: true
 
@@ -126,36 +124,37 @@ body:
     id: logs-output
     attributes:
       label: Logs and Output
-      description: Relevant logs, error messages, or output
-      placeholder: |
-        Paste relevant logs here. Use ``` code blocks for formatting.
+      description: |
+        Paste relevant logs, error messages, or command output here.
 
-        Remember to redact any sensitive information!
+        **Important:** Use code blocks (```) for formatting and remember to redact any sensitive information like passwords, API keys, hostnames, or IP addresses!
+      placeholder: "Paste logs and output here..."
       render: text
 
   - type: textarea
     id: configuration
     attributes:
       label: Configuration
-      description: Relevant configuration details (redact sensitive info)
-      placeholder: |
-        Share relevant parts of your configuration files, command line arguments, etc.
+      description: |
+        Share relevant parts of your configuration files, command line arguments, environment variables, etc.
 
-        ⚠️ Make sure to remove any sensitive information like passwords, API keys, etc.
+        **⚠️ Security Notice:** Make sure to remove any sensitive information like passwords, API keys, certificates, or internal network details before posting!
+      placeholder: "Paste relevant configuration here..."
       render: text
 
   - type: textarea
     id: additional-context
     attributes:
       label: Additional Context
-      description: Any other context about the problem
-      placeholder: |
-        - Screenshots (if applicable)
+      description: |
+        Any other context that might help us understand and reproduce the problem:
+        - Screenshots or recordings (if applicable)
         - Workarounds you've tried
-        - Related issues
-        - Network topology
+        - Related issues or discussions
+        - Network topology or setup details
         - Timeline of when the issue started
-        - Any other relevant information
+        - Hardware specifications (if performance-related)
+      placeholder: "Any additional context, screenshots, or relevant information..."
 
   - type: dropdown
     id: impact
