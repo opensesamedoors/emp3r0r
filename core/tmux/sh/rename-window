@@ -20,8 +20,8 @@ exe="$(ps --ppid "$active_pid" -o exe=)"
 user="$(ps --ppid "$active_pid" -o user=)"
 [[ "$user" == "root" ]] && title="$title ($user)"
 
-# debug
-# echo "$(date) $1 $(ps --ppid "$1" -o pid=,exe=,args=): '$title'" >>/tmp/tmux.log
+# truncate title to 10 characters maximum
+title="${title:0:10}"
 
 # set title
 echo -ne "$title"
