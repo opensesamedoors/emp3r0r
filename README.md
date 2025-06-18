@@ -14,6 +14,22 @@ Join our Discord server for discussions, support, and updates:
 
 [![Discord](https://img.shields.io/badge/Discord-Join%20Server-7289da?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/nnZwAjd9)
 
+## Support the Project
+
+If emp3r0r has been helpful in your work, please consider supporting its development:
+
+[![GitHub Sponsors](https://img.shields.io/badge/GitHub-Sponsor-ff69b4?style=for-the-badge&logo=github&logoColor=white)](https://github.com/sponsors/jm33-m0)
+
+Your sponsorship helps:
+
+- 🚀 **Accelerate development** of new features and improvements
+- 🛡️ **Maintain security** with regular updates and vulnerability fixes
+- 📚 **Improve documentation** and create better learning resources
+- 🔧 **Provide community support** and respond to issues faster
+- 💡 **Research and innovation** in post-exploitation techniques
+
+Every contribution, no matter the size, makes a difference in keeping emp3r0r actively maintained and evolving!
+
 ---
 
 ## Getting Started

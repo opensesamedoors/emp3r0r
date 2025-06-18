@@ -11,6 +11,12 @@ body:
 
         **Note**: Before submitting, please check if a similar feature request already exists.
 
+        ---
+
+        💖 **Support the Project**: If emp3r0r has been helpful to you, consider [sponsoring the project](https://github.com/sponsors/jm33-m0) to support ongoing development and new features!
+
+        🚀 **Want your feature implemented faster?** Sponsors get priority development and faster feature delivery!
+
   - type: checkboxes
     id: prerequisites
     attributes:

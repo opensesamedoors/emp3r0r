@@ -11,6 +11,12 @@ body:
 
         **Note**: For security vulnerabilities, please follow our security policy and report privately.
 
+        ---
+
+        💖 **Support the Project**: If emp3r0r has been helpful to you, consider [sponsoring the project](https://github.com/sponsors/jm33-m0) to support ongoing development and maintenance!
+
+        ⚡ **Want faster bug fixes?** Sponsors get priority support and faster issue resolution!
+
   - type: checkboxes
     id: prerequisites
     attributes:
