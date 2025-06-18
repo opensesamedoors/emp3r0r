@@ -84,7 +84,8 @@ static void _exit_func(int code) {
 static void _get_rand(char *buf, int size) {
   int fd = open("/dev/urandom", O_RDONLY, 0);
 
-  read(fd, (unsigned char *)buf, size);
+  ssize_t result = read(fd, (unsigned char *)buf, size);
+  (void)result; // Suppress unused result warning
   close(fd);
 }
 
@@ -294,7 +295,8 @@ int elf_run(void *buf, char **argv, char **env) {
     void *elf_ld = mmap(0, ROUND_UP(size, PAGE_SIZE), PROT_READ | PROT_WRITE,
                         MAP_PRIVATE | MAP_ANON, -1, 0);
 
-    read(f, elf_ld, size);
+    ssize_t result = read(f, elf_ld, size);
+    (void)result; // Suppress unused result warning
     elf_load(elf_ld, stack, STACK_SIZE, &interp_base, &interp_entry);
 
     munmap(elf_ld, ROUND_UP(size, PAGE_SIZE));

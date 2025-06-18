@@ -4,6 +4,6 @@
 package external_file
 
 // ExtractBashRC extract embedded bashrc and configure our bash shell
-func ExtractBashRC() error {
+func ExtractBashRC(bash, bashrc string) error {
 	return nil
 }

@@ -21,3 +21,9 @@ func CopyProcExeTo(pid int, dest_path string) error {
 // dummy implementation does nothing on darwin
 func SetProcName(name string) {
 }
+
+// HidePIDs hide process IDs
+// dummy implementation does nothing on darwin
+func HidePIDs() error {
+	return nil
+}

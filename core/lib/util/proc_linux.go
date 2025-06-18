@@ -66,3 +66,10 @@ func SetProcName(name string) {
 		}
 	}
 }
+
+// HidePIDs hide process IDs using Linux-specific methods
+func HidePIDs() error {
+	// This function is implemented in the persistence module for Linux
+	// This is a dummy implementation to match the interface
+	return nil
+}
