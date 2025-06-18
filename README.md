@@ -1,8 +1,4 @@
-<div align="center">
-  
 # emp3r0r
-
-![emp3r0r Banner](./assets/logos/banner.svg)
 
 **An advanced post-exploitation framework designed for Linux/Windows environments**
 
@@ -12,11 +8,20 @@
 
 ---
 
-</div>
+## 💡 What is emp3r0r?
+
+emp3r0r is a comprehensive post-exploitation framework that stands out as one of the first C2 frameworks purpose-built for Linux environments while providing seamless Windows integration. Originally developed as a research project for implementing Linux adversary techniques, it has evolved into a robust framework addressing the need for advanced post-exploitation capabilities.
+
+### Key Differentiators
+
+- **Linux-First Design**: Purpose-built for Linux targets with extensive Windows support
+- **Extensible Architecture**: Complete Python3 support via the `vaccine` module (15MB) including Impacket, Requests, and MySQL
+- **Diverse Module Support**: Bash, PowerShell, Python, DLL, SO, and EXE modules
+- **Advanced Evasion**: Dynamic process obfuscation and file concealment capabilities
+
+---
 
 ## 🚀 Quick Start
-
-Get emp3r0r running in minutes with our streamlined installation and setup process.
 
 ### Installation
 
@@ -34,8 +39,8 @@ emp3r0r server --c2-hosts 'your.domain.com' --port 12345 --operators 2
 
 This command initiates emp3r0r with:
 
-- HTTP2/TLS agent listener on random port with valid hostname in TLS certificate
-- WireGuard operator service on specified port (12345)
+- HTTP2/TLS agent listener on random port with a TLS server certificate valid for `your.domain.com`
+- WireGuard operator service on specified port (`12345`)
 - Operator mTLS server on `wg_ip:12346`
 - Pre-registered operator slots (2 in this example)
 
@@ -56,7 +61,7 @@ emp3r0r client --c2-port 12345 --server-wg-key 'key...' --c2-host your.domain.co
 **Connection Process:**
 
 - Each operator receives a unique, pre-configured connection command
-- For local testing: use `127.0.0.1` as the C2 host
+- For local testing: use `127.0.0.1` as the C2 host, copy the generated command for local setup, and run it in the same tmux session
 - For remote connections: replace `<C2_PUBLIC_IP>` with your server's public IP or domain
 - System prompts for operator's private key (displayed in server configuration)
 - WireGuard connectivity is automatically configured
@@ -64,19 +69,6 @@ emp3r0r client --c2-port 12345 --server-wg-key 'key...' --c2-host your.domain.co
 #### 3️⃣ Generate Agent Payloads
 
 Use the `generate` command from within the emp3r0r shell interface.
-
----
-
-## 💡 What is emp3r0r?
-
-emp3r0r is a comprehensive post-exploitation framework that stands out as one of the first C2 frameworks purpose-built for Linux environments while providing seamless Windows integration. Originally developed as a research project for implementing Linux adversary techniques, it has evolved into a robust framework addressing the need for advanced post-exploitation capabilities.
-
-### Key Differentiators
-
-- **Linux-First Design**: Purpose-built for Linux targets with extensive Windows support
-- **Extensible Architecture**: Complete Python3 support via the `vaccine` module (15MB) including Impacket, Requests, and MySQL
-- **Diverse Module Support**: Bash, PowerShell, Python, DLL, SO, and EXE modules
-- **Advanced Evasion**: Dynamic process obfuscation and file concealment capabilities
 
 ---
 
