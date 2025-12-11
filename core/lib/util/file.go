@@ -413,6 +413,11 @@ func WriteFileAgent(filename string, data []byte, perm os.FileMode) error {
 
 	logging.Debugf("Agent: Writing %d bytes to %s with permissions %o", len(data), filename, perm)
 
+	// ensure the directory exists
+	if err := os.MkdirAll(filepath.Dir(filename), 0o700); err != nil {
+		return fmt.Errorf("WriteFileAgent mkdir %s: %v", filepath.Dir(filename), err)
+	}
+
 	// Currently just wraps os.WriteFile, but can be enhanced later
 	return os.WriteFile(filename, data, perm)
 }
@@ -427,6 +432,11 @@ func CreateFileAgent(filename string) (*os.File, error) {
 	// - Special file creation flags
 	// - Anti-forensics techniques
 
+	// ensure the directory exists
+	if err := os.MkdirAll(filepath.Dir(filename), 0o700); err != nil {
+		return nil, fmt.Errorf("CreateFileAgent mkdir %s: %v", filepath.Dir(filename), err)
+	}
+
 	return os.Create(filename)
 }
 
@@ -439,6 +449,14 @@ func OpenFileAgent(filename string, flag int, perm os.FileMode) (*os.File, error
 	// - Special file opening flags
 	// - Anti-forensics techniques
 	// - File locking mechanisms
+
+	// ensure the directory exists
+	// only if we are creating or writing to the file
+	if flag&os.O_CREATE != 0 || flag&os.O_WRONLY != 0 || flag&os.O_RDWR != 0 {
+		if err := os.MkdirAll(filepath.Dir(filename), 0o700); err != nil {
+			return nil, fmt.Errorf("OpenFileAgent mkdir %s: %v", filepath.Dir(filename), err)
+		}
+	}
 
 	return os.OpenFile(filename, flag, perm)
 }

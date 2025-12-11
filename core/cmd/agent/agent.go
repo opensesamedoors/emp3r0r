@@ -93,15 +93,6 @@ func agent_main() {
 	}
 
 	if runtime.GOOS == "linux" {
-		// mkdir -p UtilsPath
-		// use absolute path
-		if !util.IsExist(common.RuntimeConfig.UtilsPath) {
-			err = os.MkdirAll(common.RuntimeConfig.UtilsPath, 0o700)
-			if err != nil {
-				log.Fatalf("[-] Cannot mkdir %s: %v", common.RuntimeConfig.AgentRoot, err)
-			}
-		}
-
 		// PATH
 		agentutils.SetPath()
 
