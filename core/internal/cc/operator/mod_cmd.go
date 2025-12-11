@@ -1,8 +1,6 @@
 package operator
 
 import (
-	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/jm33-m0/emp3r0r/core/internal/cc/base/agents"
