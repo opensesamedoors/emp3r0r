@@ -62,13 +62,13 @@ func DownloadViaC2(file_to_download, path, checksum string) (data []byte, err er
 		retData = true
 		log.Printf("No path specified, will return []byte")
 	}
-	lock := fmt.Sprintf("%s.downloading", path)
+	lock := fmt.Sprintf("%s.lock", path)
 	if util.IsFileExist(lock) {
 		err = fmt.Errorf("%s already being downloaded", url)
 		return
 	}
 
-	// create file.downloading to prevent racing downloads
+	// create file.lock to prevent racing downloads
 	if !retData {
 		util.CreateFileAgent(lock)
 	}

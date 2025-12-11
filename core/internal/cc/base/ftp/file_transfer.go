@@ -96,7 +96,7 @@ func GenerateGetFilePaths(file_path string) (write_dir, save_to_file, tempname, 
 	file_path = filepath.Clean(file_path)
 	write_dir = fmt.Sprintf("%s%s", live.FileGetDir, filepath.Dir(file_path))
 	save_to_file = fmt.Sprintf("%s/%s", write_dir, util.FileBaseName(file_path))
-	tempname = save_to_file + ".downloading"
+	tempname = save_to_file + ".tmp"
 	lock = save_to_file + ".lock"
 	return
 }
@@ -143,7 +143,7 @@ func GetFile(file_path string, agent *def.Emp3r0rAgent) (ftpSh *network.StreamHa
 		}
 	}
 
-	err = util.FileAllocate(save_to_file, filesize)
+	err = util.FileAllocate(tempname, filesize)
 	if err != nil {
 		err = fmt.Errorf("GetFile: %s allocate file: %v", file_path, err)
 		return

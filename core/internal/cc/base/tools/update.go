@@ -127,7 +127,7 @@ func UpdateCC(cmd *cobra.Command, args []string) {
 
 	// download path
 	path := "/tmp/emp3r0r.tar.zst"
-	lock := fmt.Sprintf("%s.downloading", path)
+	lock := fmt.Sprintf("%s.lock", path)
 
 	// check if lock exists
 	if util.IsFileExist(lock) {
