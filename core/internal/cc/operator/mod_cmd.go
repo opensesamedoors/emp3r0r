@@ -1,6 +1,8 @@
 package operator
 
 import (
+	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/jm33-m0/emp3r0r/core/internal/cc/base/agents"
@@ -65,6 +67,15 @@ func cmdModuleRun(_ *cobra.Command, _ []string) {
 		logging.Errorf("No module selected")
 		return
 	}
+
+	// Warnings
+	if !live.ActiveModule.Fileless {
+		warn := fmt.Sprintf("Warning: Module %s is not fileless and may drop files or modify system configuration. Continue?", strconv.Quote(live.ActiveModule.Name))
+		if !cli.YesNo(warn) {
+			return
+		}
+	}
+
 	// Send command to module
 	modules.ModuleRun()
 }

