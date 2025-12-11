@@ -186,6 +186,9 @@ int elf_load(char *elf_start, void *stack, int stack_size, size_t *base_addr,
     *entry = base + hdr->e_entry;
 
   for (x = 0; x < hdr->e_phnum; x++) {
+    // Reset elf_prot for the current segment
+    elf_prot = 0;
+
 #if !defined(OS_FREEBSD)
     // Get flags for the stack
     if (stack != NULL && phdr[x].p_type == PT_GNU_STACK) {
@@ -228,13 +231,17 @@ int elf_load(char *elf_start, void *stack, int stack_size, size_t *base_addr,
 
     // Set proper protection on the area
     if (phdr[x].p_flags & PF_R)
-      elf_prot = PROT_READ;
+      elf_prot |= PROT_READ;
 
     if (phdr[x].p_flags & PF_W)
       elf_prot |= PROT_WRITE;
 
     if (phdr[x].p_flags & PF_X)
       elf_prot |= PROT_EXEC;
+
+    // Enforce W^X: If Write and Exec are both set, remove Write.
+    if ((elf_prot & PROT_WRITE) && (elf_prot & PROT_EXEC))
+      elf_prot &= ~PROT_WRITE;
 
     mprotect((unsigned char *)(base + map_start), map_size, elf_prot);
 
@@ -290,24 +297,24 @@ int elf_run(void *buf, char **argv, char **env) {
     return -1;
 
   // Check for the existence of a dynamic loader
-  char *interp_name = _get_interp(buf);
+  /* char *interp_name = _get_interp(buf); */
 
-  if (interp_name) {
-    int f = open(interp_name, O_RDONLY, 0);
+  /* if (interp_name) { */
+  /*   int f = open(interp_name, O_RDONLY, 0); */
 
-    // Find out the size of the file
-    int size = lseek(f, 0, SEEK_END);
-    lseek(f, 0, SEEK_SET);
+  /*   // Find out the size of the file */
+  /*   int size = lseek(f, 0, SEEK_END); */
+  /*   lseek(f, 0, SEEK_SET); */
 
-    void *elf_ld = mmap(0, ROUND_UP(size, PAGE_SIZE), PROT_READ | PROT_WRITE,
-                        MAP_PRIVATE | MAP_ANON, -1, 0);
+  /*   void *elf_ld = mmap(0, ROUND_UP(size, PAGE_SIZE), PROT_READ | PROT_WRITE, */
+  /*                       MAP_PRIVATE | MAP_ANON, -1, 0); */
 
-    ssize_t result = read(f, elf_ld, size);
-    (void)result; // Suppress unused result warning
-    elf_load(elf_ld, stack, STACK_SIZE, &interp_base, &interp_entry);
+  /*   ssize_t result = read(f, elf_ld, size); */
+  /*   (void)result; // Suppress unused result warning */
+  /*   elf_load(elf_ld, stack, STACK_SIZE, &interp_base, &interp_entry); */
 
-    munmap(elf_ld, ROUND_UP(size, PAGE_SIZE));
-  }
+  /*   munmap(elf_ld, ROUND_UP(size, PAGE_SIZE)); */
+  /* } */
 
   // Zero out the whole stack, Justin Case
   memset(stack, 0, STACK_STORAGE_SIZE);

