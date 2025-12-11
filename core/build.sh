@@ -343,6 +343,7 @@ case "$1" in
     cp -aR "$pwd/tmux" "$temp" || error "cp tmux"
     cp -aR "$pwd/modules" "$temp" || error "cp modules"
     cp -aR "$pwd/emp3r0r" "$temp" || error "cp emp3r0r"
+    cp -aR "$pwd/build.sh" "$temp" || error "cp build.sh"
     create_tar
   )
 
@@ -356,6 +357,7 @@ case "$1" in
     cp -aR "$pwd/tmux" "$temp" || error "cp tmux"
     cp -aR "$pwd/modules" "$temp" || error "cp modules"
     cp -aR "$pwd/emp3r0r" "$temp" || error "cp emp3r0r"
+    cp -aR "$pwd/build.sh" "$temp" || error "cp build.sh"
     create_tar
   )
 
