@@ -143,7 +143,7 @@ func GetFile(file_path string, agent *def.Emp3r0rAgent) (ftpSh *network.StreamHa
 		}
 	}
 
-	err = util.FileAllocate(tempname, filesize)
+	err = util.FileAllocate(save_to_file, filesize)
 	if err != nil {
 		err = fmt.Errorf("GetFile: %s allocate file: %v", file_path, err)
 		return

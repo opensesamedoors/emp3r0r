@@ -97,6 +97,7 @@ func HandleFTPTransfer(sh *network.StreamHandler, wrt http.ResponseWriter, req *
 		return
 	}
 	mapKey := filename
+	// Prepare file paths. targetFile is the final destination, filewrite is the temp file that we write to, it will be renamed to targetFile when done.
 	writeDir, targetFile, filewrite, lock := GenerateGetFilePaths(filename)
 	filename = filepath.Clean(filename)
 	filename = util.FileBaseName(filename)
