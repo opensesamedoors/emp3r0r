@@ -118,6 +118,7 @@ func Emp3r0rCommands(app *console.Console) console.Commands {
 			Args:    cobra.NoArgs,
 			Run:     cmdModuleRun,
 		}
+		runCmd.Flags().BoolP("force", "f", false, "Force execution without confirmation")
 		rootCmd.AddCommand(runCmd)
 
 		targetCmd := &cobra.Command{

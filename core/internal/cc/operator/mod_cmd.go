@@ -62,16 +62,18 @@ func listModOptionsTable() {
 	logging.Printf("\n%s", tableStr)
 }
 
-func cmdModuleRun(_ *cobra.Command, _ []string) {
+func cmdModuleRun(cmd *cobra.Command, _ []string) {
 	if live.ActiveModule == nil {
 		logging.Errorf("No module selected")
 		return
 	}
 
 	// Warnings
-	if !live.ActiveModule.Fileless {
-		warn := fmt.Sprintf("Warning: Module %s is not fileless and may drop files or modify system configuration. Continue?", strconv.Quote(live.ActiveModule.Name))
-		if !cli.YesNo(warn) {
+	if !live.ActiveModule.Fileless && !live.ActiveModule.IsLocal {
+		force, _ := cmd.Flags().GetBool("force")
+		if !force {
+			logging.Warningf("Module %s is not fileless and may drop files or modify system configuration.", live.ActiveModule.Name)
+			logging.Printf("Run with 'run --force' to confirm.")
 			return
 		}
 	}
