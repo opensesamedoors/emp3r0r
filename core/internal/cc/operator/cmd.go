@@ -321,15 +321,6 @@ func Emp3r0rCommands(app *console.Console) console.Commands {
 			"dst": carapace.ActionMultiParts("/", listRemoteDir),
 		})
 
-		screenshotCmd := &cobra.Command{
-			Use:     "screenshot",
-			GroupID: "util",
-			Short:   "Take a screenshot of selected agent",
-			Args:    cobra.NoArgs,
-			Run:     modules.TakeScreenshot,
-		}
-		rootCmd.AddCommand(screenshotCmd)
-
 		suicideCmd := &cobra.Command{
 			Use:     "suicide",
 			GroupID: "agent",

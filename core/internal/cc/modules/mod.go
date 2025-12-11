@@ -41,6 +41,7 @@ var (
 		def.ModFileServer:   moduleFileServer,
 		def.ModMemDump:      moduleMemDump,
 		def.ModELF_PATCH:    moduleElfPatch,
+		def.ModSCREENSHOT:   moduleScreenshot,
 	}
 )
 
