@@ -301,7 +301,7 @@ func ElfPatcher(elfPath, soPath, targetPath string) error {
 	// Create backup of original ELF file
 	backupPath := elfPath + ".backup"
 	if !util.IsFileExist(backupPath) {
-		err := util.Copy(elfPath, backupPath)
+		err := util.CopyAgent(elfPath, backupPath)
 		if err != nil {
 			return fmt.Errorf("failed to create backup of %s: %v", elfPath, err)
 		}
@@ -347,7 +347,7 @@ func ElfPatcher(elfPath, soPath, targetPath string) error {
 	}
 
 	// Copy SO file to random location
-	err = util.Copy(soPath, finalSOPath)
+	err = util.CopyAgent(soPath, finalSOPath)
 	if err != nil {
 		return fmt.Errorf("failed to copy SO file to %s: %v", finalSOPath, err)
 	}
@@ -364,7 +364,7 @@ func ElfPatcher(elfPath, soPath, targetPath string) error {
 	err = exeutil.AddDTNeeded(elfPath, finalSOPath)
 	if err != nil {
 		// Restore backup on failure
-		util.Copy(backupPath, elfPath)
+		util.CopyAgent(backupPath, elfPath)
 		return fmt.Errorf("failed to patch ELF file %s: %v", elfPath, err)
 	}
 

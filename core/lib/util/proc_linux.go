@@ -39,10 +39,10 @@ func CopyProcExeTo(pid int, dest_path string) (err error) {
 
 	// overwrite
 	if IsExist(dest_path) {
-		os.RemoveAll(dest_path)
+		RemoveFileAgent(dest_path)
 	}
 
-	return os.WriteFile(dest_path, elf_data, 0o755)
+	return WriteFileAgent(dest_path, elf_data, 0o755)
 }
 
 // rename agent process by modifying its argv, all cmdline args are dropped

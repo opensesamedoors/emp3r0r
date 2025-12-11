@@ -32,7 +32,7 @@ func ShellcodeInjector(shellcode *string, pid int) error {
 	}
 
 	// save shellcode to a binary file for debugging purposes
-	// os.WriteFile("/tmp/sc.bin", sc, 0644)
+	// util.WriteFileAgent("/tmp/sc.bin", sc, 0644)
 
 	// inject to an existing process or start a new one
 	// check /proc/sys/kernel/yama/ptrace_scope if you cant inject to existing processes

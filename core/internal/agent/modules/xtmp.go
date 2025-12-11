@@ -35,7 +35,7 @@ func deleteXtmpEntry(keyword string) (err error) {
 		}
 
 		// back up xtmp file
-		// err = ioutil.WriteFile(path+".bak", xmtpData, 0664)
+		// util.WriteFileAgent(path+".bak", xmtpData, 0664)
 		// if err != nil {
 		//	return fmt.Errorf("Failed to backup %s: %v", path, err)
 		// }

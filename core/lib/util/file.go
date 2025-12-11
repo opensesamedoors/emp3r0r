@@ -398,12 +398,106 @@ func GetWritablePaths(root_path string, depth, max int) ([]string, error) {
 	return writablePaths, nil
 }
 
+// ApplyFilePattern applies a naming pattern to files created/accessed by the agent.
+// Modify this function to implement your specific pattern (e.g., appending a suffix).
+// This is the hook for "every file to have a certain pattern in its name".
+func ApplyFilePattern(path string) string {
+	// Placeholder: currently returns the path as is.
+	// To implement a pattern, e.g., appending ".agent":
+	// return path + ".agent"
+	return path
+}
+
 // Agent-specific file operations for centralized control
+
+// RemoveFileAgent removes a file (wrapper for os.RemoveAll with pattern support)
+func RemoveFileAgent(path string) error {
+	path = ApplyFilePattern(path)
+	logging.Debugf("Agent: Removing file %s", path)
+	return os.RemoveAll(path)
+}
+
+// CopyAgent copy file or directory from src to dst (Agent specific)
+func CopyAgent(src, dst string) error {
+	src = ApplyFilePattern(src) // Source might also follow pattern? Usually we read existing files, but if we copy internal files...
+	// If src is an external file, ApplyFilePattern might break it if we assume everything has pattern.
+	// But the requirement is "every file... pattern".
+	// For now, let's apply it to dst. Source depends on context.
+	// If we copy /bin/ls to /tmp/ls, dst should have pattern. src should not.
+	// But if we copy /tmp/ls (previous step) to /tmp/ls.2, then src has pattern.
+	// This ambiguity makes automatic pattern hard.
+	// Assuming ApplyFilePattern is idempotent or smart?
+	// For now, I will apply it to dst only, assuming src is provided "as is" by caller (caller might have applied pattern if needed).
+	// dst = ApplyFilePattern(dst) -> WriteFileAgent does this!
+
+	srcInfo, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+
+	if srcInfo.IsDir() {
+		return copyDirAgent(src, dst)
+	}
+	return copyFileAgent(src, dst)
+}
+
+func copyFileAgent(src, dst string) error {
+	in, err := os.ReadFile(src)
+	if err != nil {
+		return err
+	}
+
+	// if destination is a directory
+	// we need to be careful with pattern here.
+	// If dst is a dir, we join with basename.
+	// WriteFileAgent will apply pattern to the FULL path.
+	// So we pass the path as intended.
+
+	f, err := os.Stat(dst)
+	if err == nil {
+		if f.IsDir() {
+			dst = filepath.Join(dst, filepath.Base(src))
+		}
+	}
+
+	// WriteFileAgent handles MkdirAll and ApplyFilePattern
+	return WriteFileAgent(dst, in, 0o755)
+}
+
+func copyDirAgent(src, dst string) error {
+	return filepath.WalkDir(src, func(path string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		relPath, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
+		}
+
+		targetPath := filepath.Join(dst, relPath)
+
+		if d.IsDir() {
+			// creating dir: MkdirAll.
+			// WriteFileAgent doesn't create empty dirs.
+			// We should perhaps hook Mkdir?
+			// The user said "every file". Dirs are files.
+			// For now, let's just use os.MkdirAll for dirs as placeholders.
+			targetPath = ApplyFilePattern(targetPath)
+			return os.MkdirAll(targetPath, d.Type().Perm())
+		}
+
+		return copyFileAgent(path, targetPath)
+	})
+}
 
 // WriteFileAgent is a centralized file writing function for agent operations.
 // This function wraps all file writing operations to allow for future modifications
 // such as encryption, steganography, or other security enhancements.
 func WriteFileAgent(filename string, data []byte, perm os.FileMode) error {
+	// Apply pattern
+	filename = ApplyFilePattern(filename)
+
 	// Future enhancements can be added here:
 	// - File encryption before writing
 	// - Steganography to hide files
@@ -425,6 +519,9 @@ func WriteFileAgent(filename string, data []byte, perm os.FileMode) error {
 // CreateFileAgent is a centralized file creation function for agent operations.
 // This function wraps file creation operations to allow for future modifications.
 func CreateFileAgent(filename string) (*os.File, error) {
+	// Apply pattern
+	filename = ApplyFilePattern(filename)
+
 	logging.Debugf("Agent: Creating file %s", filename)
 
 	// Future enhancements can be added here:
@@ -443,6 +540,9 @@ func CreateFileAgent(filename string) (*os.File, error) {
 // OpenFileAgent is a centralized file opening function for agent operations.
 // This function wraps file opening operations to allow for future modifications.
 func OpenFileAgent(filename string, flag int, perm os.FileMode) (*os.File, error) {
+	// Apply pattern
+	filename = ApplyFilePattern(filename)
+
 	logging.Debugf("Agent: Opening file %s with flags %d and permissions %o", filename, flag, perm)
 
 	// Future enhancements can be added here:

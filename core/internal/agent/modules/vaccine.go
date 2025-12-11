@@ -97,7 +97,7 @@ func VaccineHandler(download_addr, checksum string) (out string) {
 		old_path := fpath // save original path
 		if f.Name() == "patchelf" {
 			new_path := fmt.Sprintf("%s/%s.tmp", common.RuntimeConfig.UtilsPath, f.Name())
-			err = util.Copy(fpath, new_path)
+			err = util.CopyAgent(fpath, new_path)
 			if err != nil {
 				continue
 			}
