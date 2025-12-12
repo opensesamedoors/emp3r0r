@@ -288,33 +288,12 @@ int elf_run(void *buf, char **argv, char **env) {
     envc++;
 
   // Allocate some stack space
-  void *stack = mmap(0, STACK_SIZE, PROT_READ | PROT_WRITE | PROT_EXEC,
+  void *stack = mmap(0, STACK_SIZE, PROT_READ | PROT_WRITE,
                      MAP_PRIVATE | MAP_ANON, -1, 0);
 
   // Map the ELF in memory
   if (elf_load(buf, stack, STACK_SIZE, &elf_base, &elf_entry) < 0)
     return -1;
-
-  // Check for the existence of a dynamic loader
-  /* char *interp_name = _get_interp(buf); */
-
-  /* if (interp_name) { */
-  /*   int f = open(interp_name, O_RDONLY, 0); */
-
-  /*   // Find out the size of the file */
-  /*   int size = lseek(f, 0, SEEK_END); */
-  /*   lseek(f, 0, SEEK_SET); */
-
-  /*   void *elf_ld = mmap(0, ROUND_UP(size, PAGE_SIZE), PROT_READ | PROT_WRITE,
-   */
-  /*                       MAP_PRIVATE | MAP_ANON, -1, 0); */
-
-  /*   ssize_t result = read(f, elf_ld, size); */
-  /*   (void)result; // Suppress unused result warning */
-  /*   elf_load(elf_ld, stack, STACK_SIZE, &interp_base, &interp_entry); */
-
-  /*   munmap(elf_ld, ROUND_UP(size, PAGE_SIZE)); */
-  /* } */
 
   // Zero out the whole stack, Justin Case
   memset(stack, 0, STACK_STORAGE_SIZE);
