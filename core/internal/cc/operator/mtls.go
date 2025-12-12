@@ -5,6 +5,7 @@ import (
 	"crypto/x509"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/jm33-m0/emp3r0r/core/internal/transport"
 	"golang.org/x/net/http2"
@@ -47,9 +48,10 @@ func createMTLSHttpClient() (*http.Client, error) {
 		TLSClientConfig: tlsConfig,
 	}
 
-	// Create HTTP client
+	// Create HTTP client with timeout
 	client := &http.Client{
 		Transport: transport,
+		Timeout:   30 * time.Second, // Overall request timeout
 	}
 
 	return client, nil

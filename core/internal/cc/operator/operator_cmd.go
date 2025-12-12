@@ -28,8 +28,12 @@ func sendJSONRequest(url string, data any) ([]byte, error) {
 		return nil, fmt.Errorf("failed to encode data: %w", err)
 	}
 
+	// Create request with timeout context
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
 	// Send HTTP request
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -55,6 +59,7 @@ func sendJSONRequest(url string, data any) ([]byte, error) {
 }
 
 // operatorSendCommand2Agent sends a command to an agent through the mTLS C2 operator server
+// Runs asynchronously to avoid blocking the console
 func operatorSendCommand2Agent(cmd, cmdID, agentTag string) error {
 	if cmdID == "" {
 		cmdID = uuid.NewString()
@@ -66,14 +71,19 @@ func operatorSendCommand2Agent(cmd, cmdID, agentTag string) error {
 		CommandID: &cmdID,
 	}
 
-	url := fmt.Sprintf("%s/%s", OperatorRootURL, transport.OperatorSendCommand)
-	_, err := sendJSONRequest(url, operation)
-	if err != nil {
-		return fmt.Errorf("failed to send command to agent: %v", err)
-	}
+	// Record command time immediately
 	live.CmdTimeMutex.Lock()
-	defer live.CmdTimeMutex.Unlock()
 	live.CmdTime[cmdID] = time.Now().Format("2006-01-02 15:04:05.999999999 -0700 MST")
+	live.CmdTimeMutex.Unlock()
+
+	// Send command asynchronously to avoid blocking
+	go func() {
+		url := fmt.Sprintf("%s/%s", OperatorRootURL, transport.OperatorSendCommand)
+		_, err := sendJSONRequest(url, operation)
+		if err != nil {
+			logging.Errorf("Failed to send command to agent %s: %v", agentTag, err)
+		}
+	}()
 
 	return nil
 }
