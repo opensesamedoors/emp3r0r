@@ -153,64 +153,80 @@ func connectMsgTun() (conn *h2conn.Conn, ctx context.Context, cancel context.Can
 
 func msgTunHandler() {
 	time.Sleep(3 * time.Second)
-	conn, ctx, cancel, err := connectMsgTun()
-	if err != nil {
-		logging.Errorf("Failed to connect to message tunnel: %v", err)
-		return
-	}
-	defer cancel()
+	retryDelay := 5 * time.Second
+	maxRetryDelay := 5 * time.Minute
 
-	decoder := json.NewDecoder(bufio.NewReader(conn)) // Buffered reader to prevent partial reads
-
-	// Create a ticker to simulate heartbeat checks every second
-	heartbeatTicker := time.NewTicker(1 * time.Second)
-	defer heartbeatTicker.Stop()
-
-	// Create a timeout timer for 1 minute (60 seconds)
-	timeoutTimer := time.NewTimer(1 * time.Minute)
-	defer timeoutTimer.Stop()
-
-	// Channel to track the latest heartbeat
-	heartbeatCh := make(chan struct{})
-
-	// Goroutine to monitor the heartbeat and handle the timeout
-	go func() {
-		for {
-			select {
-			case <-heartbeatTicker.C:
-				// If no heartbeat received in the last minute, close the connection
-				if !timeoutTimer.Stop() {
-					<-timeoutTimer.C
-					logging.Warningf("Message tunnel heartbeat timeout, closing connection")
-					conn.Close()
-					cancel()
-					return
-				}
-				// Reset the timeout timer after receiving a heartbeat
-				timeoutTimer.Reset(1 * time.Minute)
-			case <-heartbeatCh:
-				// Heartbeat received, reset the timeout
-				timeoutTimer.Reset(1 * time.Minute)
+	for {
+		conn, ctx, cancel, err := connectMsgTun()
+		if err != nil {
+			logging.Errorf("Failed to connect to message tunnel: %v, retrying in %v", err, retryDelay)
+			time.Sleep(retryDelay)
+			// Exponential backoff
+			retryDelay *= 2
+			if retryDelay > maxRetryDelay {
+				retryDelay = maxRetryDelay
 			}
-		}
-	}()
-
-	// Keep reading messages from the tunnel
-	for ctx.Err() == nil {
-		msg := new(def.MsgTunData)
-		if err := decoder.Decode(msg); err != nil {
-			if errors.Is(err, io.EOF) {
-				logging.Warningf("Message tunnel closed")
-				return
-			}
-			logging.Errorf("Failed to decode message: %v", err)
 			continue
 		}
-		logging.Debugf("Message tunnel got: %v", *msg)
 
-		// Reset the heartbeat timer after receiving a valid message
-		heartbeatCh <- struct{}{}
+		decoder := json.NewDecoder(bufio.NewReader(conn))
 
-		processAgentData(msg)
+		// Channel to receive decode results
+		msgCh := make(chan *def.MsgTunData, 1)
+		errCh := make(chan error, 1)
+
+		// Keep reading messages from the tunnel
+		connectionBroken := false
+		for ctx.Err() == nil {
+			// Read with timeout using goroutine
+			go func() {
+				msg := new(def.MsgTunData)
+				if err := decoder.Decode(msg); err != nil {
+					errCh <- err
+					return
+				}
+				msgCh <- msg
+			}()
+
+			// Wait for message or timeout
+			select {
+			case msg := <-msgCh:
+				logging.Debugf("Message tunnel got: %v", *msg)
+				processAgentData(msg)
+				// Reset retry delay on successful message
+				retryDelay = 5 * time.Second
+			case err := <-errCh:
+				if errors.Is(err, io.EOF) {
+					logging.Warningf("Message tunnel closed")
+				} else {
+					logging.Errorf("Failed to decode message: %v", err)
+				}
+				connectionBroken = true
+				goto reconnect
+			case <-time.After(2 * time.Minute):
+				logging.Warningf("Message tunnel read timeout, reconnecting")
+				connectionBroken = true
+				goto reconnect
+			case <-ctx.Done():
+				logging.Debugf("Context cancelled, exiting message tunnel")
+				goto reconnect
+			}
+		}
+
+	reconnect:
+		cancel()
+		conn.Close()
+
+		if connectionBroken {
+			logging.Infof("Message tunnel disconnected, reconnecting in %v", retryDelay)
+			time.Sleep(retryDelay)
+			// Exponential backoff
+			retryDelay *= 2
+			if retryDelay > maxRetryDelay {
+				retryDelay = maxRetryDelay
+			}
+		} else {
+			time.Sleep(retryDelay)
+		}
 	}
 }

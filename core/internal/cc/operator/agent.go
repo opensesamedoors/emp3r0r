@@ -56,9 +56,23 @@ func RenderAgentTable(agents []*def.Emp3r0rAgent) {
 
 // AgentListRefresher refreshes agent list every 10 seconds
 func agentListRefresher() {
+	retryCount := 0
+	maxRetries := 3
 	for {
-		refreshAgentList()
-		time.Sleep(10 * time.Second)
+		err := refreshAgentList()
+		if err != nil {
+			retryCount++
+			if retryCount >= maxRetries {
+				// Sleep longer on repeated failures to avoid CPU spinning
+				time.Sleep(30 * time.Second)
+				retryCount = 0
+			} else {
+				time.Sleep(10 * time.Second)
+			}
+		} else {
+			retryCount = 0
+			time.Sleep(10 * time.Second)
+		}
 	}
 }
 
