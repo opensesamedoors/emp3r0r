@@ -216,6 +216,14 @@ func GenC2Certs(hosts_str string) error {
 	// generate C2 TLS cert for given host names
 	var hosts []string
 	hosts = strings.Fields(hosts_str)
+
+	// Check if certs exist
+	if util.IsFileExist(transport.ServerCrtFile) && util.IsFileExist(transport.ServerKeyFile) &&
+		util.IsFileExist(transport.OperatorServerCrtFile) && util.IsFileExist(transport.OperatorServerKeyFile) {
+		logging.Infof("C2 certs already exist, skipping generation")
+		return nil
+	}
+
 	// if C2 server TLS cert not found, generate new ones
 	logging.Warningf("C2 TLS cert not found, generating a new one")
 	hosts = append(hosts, "127.0.0.1") // sometimes we need to connect to a relay that listens on localhost

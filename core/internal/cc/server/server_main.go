@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,6 +15,7 @@ import (
 	"github.com/jm33-m0/emp3r0r/core/lib/cli"
 	"github.com/jm33-m0/emp3r0r/core/lib/logging"
 	"github.com/jm33-m0/emp3r0r/core/lib/netutil"
+	"github.com/jm33-m0/emp3r0r/core/lib/util"
 )
 
 func ServerMain(wg_port int, hosts string, numOperators int) {
@@ -41,49 +43,109 @@ type OperatorConfig struct {
 	IP         string
 }
 
+type SavedWgConfig struct {
+	ServerIP         string           `json:"server_ip"`
+	ServerPrivateKey string           `json:"server_private_key"`
+	Subnet           string           `json:"subnet"`
+	Operators        []OperatorConfig `json:"operators"`
+}
+
 func wg(wg_port int, numOperators int) {
-	server_privkey, err := netutil.GeneratePrivateKey()
-	if err != nil {
-		logging.Fatalf("Failed to generate server private key: %v", err)
-	}
-	server_pubkey, err := netutil.PublicKeyFromPrivate(server_privkey)
-	if err != nil {
-		logging.Fatalf("Failed to generate server public key: %v", err)
-	}
+	var (
+		server_privkey string
+		server_pubkey  string
+		subnet         string
+		operators      []OperatorConfig
+		err            error
+	)
 
-	// network address
-	subnet := netutil.GenerateRandomPrivateSubnet24()
-	netutil.WgServerIP, _ = netutil.GenerateRandomIPInSubnet24(subnet)
-
-	// Generate operator configs
-	operators := make([]OperatorConfig, numOperators)
-	peers := make([]netutil.PeerConfig, numOperators)
-
-	for i := range numOperators {
-		operator_privkey, err := netutil.GeneratePrivateKey()
+	configFile := filepath.Join(live.EmpWorkSpace, "wg_config.json")
+	if util.IsFileExist(configFile) {
+		logging.Infof("Loading WireGuard config from %s", configFile)
+		data, err := os.ReadFile(configFile)
 		if err != nil {
-			logging.Fatalf("Failed to generate operator private key: %v", err)
+			logging.Fatalf("Failed to read WireGuard config: %v", err)
 		}
-		operator_pubkey, err := netutil.PublicKeyFromPrivate(operator_privkey)
+		var config SavedWgConfig
+		err = json.Unmarshal(data, &config)
 		if err != nil {
-			logging.Fatalf("Failed to generate operator public key: %v", err)
+			logging.Fatalf("Failed to parse WireGuard config: %v", err)
 		}
-		operatorIP, _ := netutil.GenerateRandomIPInSubnet24(subnet)
+		netutil.WgServerIP = config.ServerIP
+		server_privkey = config.ServerPrivateKey
+		subnet = config.Subnet
+		operators = config.Operators
 
+		server_pubkey, err = netutil.PublicKeyFromPrivate(server_privkey)
+		if err != nil {
+			logging.Fatalf("Failed to generate server public key: %v", err)
+		}
+	} else {
+		server_privkey, err = netutil.GeneratePrivateKey()
+		if err != nil {
+			logging.Fatalf("Failed to generate server private key: %v", err)
+		}
+		server_pubkey, err = netutil.PublicKeyFromPrivate(server_privkey)
+		if err != nil {
+			logging.Fatalf("Failed to generate server public key: %v", err)
+		}
+
+		// network address
+		subnet = netutil.GenerateRandomPrivateSubnet24()
+		netutil.WgServerIP, _ = netutil.GenerateRandomIPInSubnet24(subnet)
+
+		// Generate operator configs
+		operators = make([]OperatorConfig, numOperators)
+
+		for i := range numOperators {
+			operator_privkey, err := netutil.GeneratePrivateKey()
+			if err != nil {
+				logging.Fatalf("Failed to generate operator private key: %v", err)
+			}
+			operator_pubkey, err := netutil.PublicKeyFromPrivate(operator_privkey)
+			if err != nil {
+				logging.Fatalf("Failed to generate operator public key: %v", err)
+			}
+			operatorIP, _ := netutil.GenerateRandomIPInSubnet24(subnet)
+
+			// Save for the first operator (backward compatibility)
+			if i == 0 {
+				netutil.WgOperatorIP = operatorIP
+			}
+
+			operators[i] = OperatorConfig{
+				PrivateKey: operator_privkey,
+				PublicKey:  operator_pubkey,
+				IP:         operatorIP,
+			}
+		}
+
+		// Save config
+		config := SavedWgConfig{
+			ServerIP:         netutil.WgServerIP,
+			ServerPrivateKey: server_privkey,
+			Subnet:           subnet,
+			Operators:        operators,
+		}
+		data, err := json.MarshalIndent(config, "", "  ")
+		if err != nil {
+			logging.Fatalf("Failed to marshal WireGuard config: %v", err)
+		}
+		err = os.WriteFile(configFile, data, 0600)
+		if err != nil {
+			logging.Fatalf("Failed to save WireGuard config: %v", err)
+		}
+	}
+
+	peers := make([]netutil.PeerConfig, len(operators))
+	for i, op := range operators {
+		peers[i] = netutil.PeerConfig{
+			PublicKey:  op.PublicKey,
+			AllowedIPs: op.IP + "/32",
+		}
 		// Save for the first operator (backward compatibility)
 		if i == 0 {
-			netutil.WgOperatorIP = operatorIP
-		}
-
-		operators[i] = OperatorConfig{
-			PrivateKey: operator_privkey,
-			PublicKey:  operator_pubkey,
-			IP:         operatorIP,
-		}
-
-		peers[i] = netutil.PeerConfig{
-			PublicKey:  operator_pubkey,
-			AllowedIPs: operatorIP + "/32",
+			netutil.WgOperatorIP = op.IP
 		}
 	}
 
