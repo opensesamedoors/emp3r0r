@@ -127,12 +127,20 @@ Use the `generate` command from within the emp3r0r shell interface to create cus
 
 - Multi-stage delivery for Linux and Windows with ELF/DLL/shellcode options.
 - Windows DLL/shellcode agents for loader-friendly drops; Linux shared-library stager for stealthy starts.
+- **Built-in listener module** supports HTTP, TCP, and UDP protocols for agent-side payload hosting during lateral movement.
 
 #### Advanced Linux Stager (Outcome-Focused)
 
 - Keeps the agent payload encrypted until the moment of execution, avoiding plaintext on disk.
 - Watches the agent and auto-restarts with jitter when connectivity/policy requires, so access recovers without manual action.
 - Ships with safe defaults to prevent self-deletion or noisy argv changes when invoked by the stager.
+- Supports multiple listener protocols (HTTP/TCP/UDP) via compile-time configuration.
+
+#### Agent-Side Listener for Lateral Movement
+
+- Deploy listeners on compromised hosts to serve payloads internally, bypassing slow C2 connections.
+- Supports `http_aes_compressed`, `tcp_aes_compressed`, and `udp_aes_compressed` for encrypted payload delivery.
+- Ideal for rapid agent propagation within target networks without external communication.
 
 #### In-Memory Execution
 
