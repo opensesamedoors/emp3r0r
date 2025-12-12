@@ -81,9 +81,15 @@ func cleanupConfig() (err error) {
 }
 
 func DownloadExtractConfig(url string, downloader func(string, string) error) (err error) {
-	logging.Infof("Downloading and extracting config from %s to %s", url, EmpConfigTar)
+	// Use a client-only destination to avoid clobbering the server's copy when running locally
+	configTarPath := EmpConfigTar
+	if !IsServer {
+		configTarPath = filepath.Join(EmpWorkSpace, "emp3r0r_operator_config.client.tar.xz")
+	}
+
+	logging.Infof("Downloading and extracting config from %s to %s", url, configTarPath)
 	// download config tarball from server
-	err = downloader(url, EmpConfigTar)
+	err = downloader(url, configTarPath)
 	if err != nil {
 		return
 	}
@@ -97,8 +103,14 @@ func DownloadExtractConfig(url string, downloader func(string, string) error) (e
 	if err != nil {
 		return
 	}
+
 	// unarchive config files to workspace
-	return arc.Unarchive(EmpConfigTar, HOME)
+	defer func() {
+		if !IsServer && configTarPath != EmpConfigTar {
+			_ = os.Remove(configTarPath)
+		}
+	}()
+	return arc.Unarchive(configTarPath, HOME)
 }
 
 func SetupFilePaths() (err error) {
