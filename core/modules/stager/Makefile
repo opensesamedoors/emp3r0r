@@ -16,9 +16,9 @@ stager_so_debug:
 	@echo "Stager shared object (with debug) compiled successfully at ${PWD}/stager.so"
 
 stager_exe:
-	${CC} ${CFLAGS} -DOS_LINUX -DLINUX_EXE $(SRC) -o stager -ldl -s
+	musl-gcc ${CFLAGS} -DOS_LINUX -DLINUX_EXE $(SRC) -o stager -static -s
 	@echo "Stager executable compiled successfully at ${PWD}/stager"
 
 stager_exe_debug:
-	${CC} ${CFLAGS} -DDEBUG -DOS_LINUX -DLINUX_EXE $(SRC) -o stager -ldl -g
+	musl-gcc ${CFLAGS} -DDEBUG -DOS_LINUX -DLINUX_EXE $(SRC) -o stager -static -g
 	@echo "Stager executable (with debug) compiled successfully at ${PWD}/stager"
