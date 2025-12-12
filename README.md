@@ -70,82 +70,91 @@ Use the `generate` command from within the emp3r0r shell interface to create cus
 
 ### Stealth & Evasion
 
-- **OpSec Safety & File Operations**
-  - **Fileless Warnings**: The C2 automatically warns operators when a selected module is about to drop files on the target disk, preventing accidental OpSec failures.
-  - **Lazy Initialization**: Agent directories (e.g., `AgentRoot`) are created **only on demand**, reducing the agent's filesystem footprint on startup.
-  - **Unified File Hooks**: All agent file operations utilize centralized wrappers (`WriteFileAgent`, etc.), allowing for custom naming patterns and behavior hooks for all dropped artifacts.
-  - **Stealthy Artifacts**: Temporary files and lock files use generic suffixes (`.tmp`, `.lock`).
+#### OpSec Safety & File Operations
 
-- **Advanced Process Hiding**
-  - Dynamic `argv` manipulation to obfuscate process listings.
-  - File and PID concealment via Glibc hijacking techniques.
-  - Anti-debugging and anti-analysis countermeasures.
+- Warns before modules write to disk, so you avoid noisy actions.
+- Leaves almost no footprint until work begins, keeping hosts clean.
+- Uniform file handling makes dropped artifacts predictable and low-profile.
+- Temporary artifacts stay generic to blend into the system.
 
-- **Secure Command & Control**
-  - HTTP2/TLS with UTLS implementation to defeat JA3 fingerprinting.
-  - KCP-based fast, multiplexed UDP tunneling for high-performance operations.
-  - Native TOR and CDN proxy support for anonymization.
-  - WireGuard + mTLS for operator authentication and secure channels.
+#### Advanced Process Hiding
+
+- Obfuscates process names and hides helper files/IDs to lower visibility.
+- Anti-debug/analysis countermeasures make inspection harder.
+
+#### Secure Command & Control
+
+- JA3-evasive HTTP2/TLS plus WireGuard+mTLS keeps operator access locked down.
+- KCP delivers fast, resilient links; TOR/CDN proxies give extra cover.
 
 ### Operator Experience
 
-- **Professional CLI Interface**
-  - Built on console and cobra frameworks for robust command handling.
-  - Intelligent auto-completion with syntax highlighting.
-  - Native tmux integration for parallel operations.
-  - **ByoS (Bring Your Own Shell)**: Full `elvish` shell compatibility.
+#### Professional CLI Interface
 
-- **Advanced Shell Integration**
-  - SSH with full PTY support for native terminal experience.
-  - Windows compatibility with standard OpenSSH clients.
-  - SFTP integration for efficient remote file operations.
+- Built on console and cobra frameworks for robust command handling.
+- Intelligent auto-completion with syntax highlighting.
+- Native tmux integration for parallel operations.
+- **ByoS (Bring Your Own Shell)**: Full `elvish` shell compatibility.
 
-- **File Transfer System**
-  - **Bidirectional Transfer**: Upload files to agents (`put`) and download from agents (`get`) with intuitive commands.
-  - **Recursive Downloads**: Download entire directories with `--recursive` flag and filter files using regex patterns (`--regex`).
-  - **Smart Transfer Strategy**: Agents can fetch files from peer agents via encrypted KCP tunnels before falling back to C2, improving speed and stealth.
-  - **Integrity & Reliability**: SHA256 checksum verification ensures file integrity; resume support allows interrupted transfers to continue from the last offset.
-  - **Real-Time Monitoring**: Progress bars display transfer speed, completion percentage, and estimated time remaining.
-  - **Compression**: Zstandard compression reduces bandwidth usage and accelerates transfers.
-  - **FileServer Module**: Agents can host an encrypted HTTP server to share files with other agents, enabling peer-to-peer distribution.
-  - **Security**: All transfers occur over HTTP2/TLS connections with lock file protection to prevent concurrent access.
+#### Advanced Shell Integration
+
+- SSH with full PTY support for native terminal experience.
+- Windows compatibility with standard OpenSSH clients.
+- SFTP integration for efficient remote file operations.
+
+#### File Transfer System
+
+- **Bidirectional Transfer**: Upload files to agents (`put`) and download from agents (`get`) with intuitive commands.
+- **Recursive Downloads**: Download entire directories with `--recursive` flag and filter files using regex patterns (`--regex`).
+- **Smart Transfer Strategy**: Agents can fetch files from peer agents via encrypted KCP tunnels before falling back to C2, improving speed and stealth.
+- **Integrity & Reliability**: SHA256 checksum verification ensures file integrity; resume support allows interrupted transfers to continue from the last offset.
+- **Real-Time Monitoring**: Progress bars display transfer speed, completion percentage, and estimated time remaining.
+- **Compression**: Zstandard compression reduces bandwidth usage and accelerates transfers.
+- **FileServer Module**: Agents can host an encrypted HTTP server to share files with other agents, enabling peer-to-peer distribution.
+- **Security**: All transfers occur over HTTP2/TLS connections with lock file protection to prevent concurrent access.
 
 ### Network Pivoting
 
-- **Intelligent Network Traversal**
-  - Automatic agent bridging through Shadowsocks proxy chains.
-  - Reverse proxy capabilities via SSH and KCP tunnels (`bring2cc`).
-  - External target access for otherwise unreachable endpoints.
-  - Bidirectional port mapping supporting both TCP and UDP protocols.
-  - Agent-side Socks5 proxy with full UDP support.
+#### Intelligent Network Traversal
+
+- Auto-bridge agents with Shadowsocks chains to reach isolated segments.
+- Reverse proxies over SSH/KCP (`bring2cc`) open paths to otherwise unreachable hosts.
+- Bi-directional TCP/UDP port mapping and agent-side Socks5 (with UDP) for flexible pivoting.
 
 ### Payload Delivery
 
-- **Flexible Staging Options**
-  - Multi-stage payload delivery for both Linux and Windows.
-  - HTTP listener with AES encryption and compression.
-  - DLL agent and shellcode agent for Windows environments.
-  - Shared library stager for Linux targets.
+#### Flexible Staging Options
 
-- **In-Memory Execution**
-  - Execute Bash, PowerShell, Python, and native ELF binaries without touching disk.
-  - CGO-based ELF loader for memory-only execution.
-  - Process injection and shellcode injection capabilities.
-  - **ELF Patcher**: Patch arbitrary ELF binaries to load the agent payload (`elf_patch` module).
+- Multi-stage delivery for Linux and Windows with ELF/DLL/shellcode options.
+- Windows DLL/shellcode agents for loader-friendly drops; Linux shared-library stager for stealthy starts.
+
+#### Advanced Linux Stager (Outcome-Focused)
+
+- Keeps the agent payload encrypted until the moment of execution, avoiding plaintext on disk.
+- Watches the agent and auto-restarts with jitter when connectivity/policy requires, so access recovers without manual action.
+- Ships with safe defaults to prevent self-deletion or noisy argv changes when invoked by the stager.
+
+#### In-Memory Execution
+
+- Run Bash, PowerShell, Python, and native ELF modules straight from memory.
+- Memory-only loaders and injection paths keep disk footprint low.
+- ELF patcher module lets you graft the agent into existing binaries when needed.
 
 ### Post-Exploitation Arsenal
 
-- **Credential Harvesting**
-  - OpenSSH credential harvesting with real-time monitoring (`ssh_harvester`).
-  - Cross-platform memory dumping capabilities (`mem_dump`).
-  - Windows mini-dump extraction (pypykatz compatible).
+#### Credential Harvesting
 
-- **Additional Capabilities**
-  - **Screenshot**: Fully integrated module for capturing target screens.
-  - **Vaccine**: Deploy a complete Python3 runtime, nmap, socat, and other tools.
-  - **Persistence**: Multiple mechanisms including cron jobs, shell profiles, and binary patching.
-  - **LPE**: Privilege escalation tools with automated suggestions (`lpe_suggest`).
-  - **Log Sanitization**: `clean_log` module for anti-forensics.
+- OpenSSH credential harvesting with real-time monitoring (`ssh_harvester`).
+- Cross-platform memory dumping capabilities (`mem_dump`).
+- Windows mini-dump extraction (pypykatz compatible).
+
+#### Additional Capabilities
+
+- **Screenshot**: Fully integrated module for capturing target screens.
+- **Vaccine**: Deploy a complete Python3 runtime, nmap, socat, and other tools.
+- **Persistence**: Multiple mechanisms including cron jobs, shell profiles, and binary patching.
+- **LPE**: Privilege escalation tools with automated suggestions (`lpe_suggest`).
+- **Log Sanitization**: `clean_log` module for anti-forensics.
 
 ---
 
