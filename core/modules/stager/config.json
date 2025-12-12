@@ -1,6 +1,6 @@
 {
   "name": "stager",
-  "build": "make stager_so",
+  "build": "if [ \"$BUILD_EXE\" = \"yes\" ]; then make stager_exe; else make stager_so; fi",
   "author": "jm33-ng",
   "date": "2025-01-26",
   "comment": "A Linux stager that supports payload delivery via HTTP with encryption and compression. Use with emp3r0r-listener",
@@ -12,13 +12,21 @@
       "opt_name": "BUILD_EXE",
       "opt_desc": "Build stager as an executable, otherwise a shared object will be built",
       "opt_val": "no",
-      "opt_vals": ["yes", "no"]
+      "opt_vals": [
+        "yes",
+        "no"
+      ]
     },
     "ARCH": {
       "opt_name": "ARCH",
       "opt_desc": "The architecture of the target system, use GOARCH values",
       "opt_val": "amd64",
-      "opt_vals": ["amd4", "386", "arm", "riscv64"]
+      "opt_vals": [
+        "amd4",
+        "386",
+        "arm",
+        "riscv64"
+      ]
     },
     "DOWNLOAD_HOST": {
       "opt_name": "DOWNLOAD_HOST",

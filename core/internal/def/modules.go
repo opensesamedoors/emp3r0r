@@ -451,6 +451,16 @@ var Modules = map[string]*ModuleConfig{
 				Name: "port",
 				Desc: "Port to listen on, eg. 8080",
 			},
+			"compression": &ModOption{
+				Name: "compression",
+				Desc: "Compression algorithm, eg. on, off",
+				Val:  "on",
+				Vals: []string{"on", "off"},
+			},
+			"passphrase": &ModOption{
+				Name: "passphrase",
+				Desc: "Passphrase for encryption",
+			},
 		},
 		AgentConfig: AgentModuleConfig{
 			Exec:          "built-in",

@@ -8,9 +8,17 @@ SRC = stager.c aes.c elf_loader.c $(TINF_SRC)
 CFLAGS += -DGOARCH_$(ARCH) -DDOWNLOAD_HOST=\"$(DOWNLOAD_HOST)\" -DDOWNLOAD_PORT=\"$(DOWNLOAD_PORT)\" -DDOWNLOAD_PATH=\"$(DOWNLOAD_PATH)\" -DDOWNLOAD_KEY=\"$(DOWNLOAD_KEY)\"
 
 stager_so:
-	${CC} ${CFLAGS} -DOS_LINUX $(SRC) -o stager.so -fPIC -shared -ldl -nostdlib -nodefaultlibs -s
+	${CC} ${CFLAGS} -DOS_LINUX -DLINUX_SO $(SRC) -o stager.so -fPIC -shared -ldl -nostdlib -nodefaultlibs -s
 	@echo "Stager shared object compiled successfully at ${PWD}/stager.so"
 
 stager_so_debug:
-	${CC} ${CFLAGS} -DDEBUG -DOS_LINUX $(SRC) -o stager.so -pie -fPIC -shared -ldl -nostdlib -nodefaultlibs -g
+	${CC} ${CFLAGS} -DDEBUG -DOS_LINUX -DLINUX_SO $(SRC) -o stager.so -pie -fPIC -shared -ldl -nostdlib -nodefaultlibs -g
 	@echo "Stager shared object (with debug) compiled successfully at ${PWD}/stager.so"
+
+stager_exe:
+	${CC} ${CFLAGS} -DOS_LINUX -DLINUX_EXE $(SRC) -o stager -ldl -s
+	@echo "Stager executable compiled successfully at ${PWD}/stager"
+
+stager_exe_debug:
+	${CC} ${CFLAGS} -DDEBUG -DOS_LINUX -DLINUX_EXE $(SRC) -o stager -ldl -g
+	@echo "Stager executable (with debug) compiled successfully at ${PWD}/stager"
