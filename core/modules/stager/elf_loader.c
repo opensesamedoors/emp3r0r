@@ -89,11 +89,9 @@ static void _exit_func(int code) {
 }
 
 static void _get_rand(char *buf, int size) {
-  int fd = open("/dev/urandom", O_RDONLY, 0);
-
-  ssize_t result = read(fd, (unsigned char *)buf, size);
+  // Use getrandom() syscall instead of opening /dev/urandom
+  ssize_t result = getrandom(buf, size, 0);
   (void)result; // Suppress unused result warning
-  close(fd);
 }
 
 static char *_get_interp(char *buf) {
