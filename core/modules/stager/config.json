@@ -1,9 +1,9 @@
 {
   "name": "stager",
-  "build": "if [ \"$BUILD_EXE\" = \"yes\" ]; then make stager_exe; else make stager_so; fi",
+  "build": "if [ \"$BUILD_EXE\" = \"yes\" ]; then make stager_exe LISTENER_TYPE=$LISTENER_TYPE; else make stager_so LISTENER_TYPE=$LISTENER_TYPE; fi",
   "author": "jm33-ng",
-  "date": "2025-01-26",
-  "comment": "A Linux stager that supports payload delivery via HTTP with encryption and compression. Use with emp3r0r-listener",
+  "date": "2025-12-12",
+  "comment": "A Linux stager that supports payload delivery via HTTP/TCP/UDP with encryption and compression. Use with emp3r0r-listener",
   "is_local": true,
   "platform": "Linux",
   "path": "",
@@ -17,15 +17,29 @@
         "no"
       ]
     },
+    "LISTENER_TYPE": {
+      "opt_name": "LISTENER_TYPE",
+      "opt_desc": "Listener protocol type: HTTP, TCP, or UDP",
+      "opt_val": "HTTP",
+      "opt_vals": [
+        "HTTP",
+        "TCP",
+        "UDP"
+      ]
+    },
     "ARCH": {
       "opt_name": "ARCH",
       "opt_desc": "The architecture of the target system, use GOARCH values",
       "opt_val": "amd64",
       "opt_vals": [
-        "amd4",
+        "amd64",
         "386",
         "arm",
-        "riscv64"
+        "arm64",
+        "riscv64",
+        "mips",
+        "mips64",
+        "ppc64"
       ]
     },
     "DOWNLOAD_HOST": {
@@ -36,13 +50,13 @@
     },
     "DOWNLOAD_PORT": {
       "opt_name": "DOWNLOAD_PORT",
-      "opt_desc": "The port to download the payload from, eg. 80",
+      "opt_desc": "The port to download the payload from, eg. 8000",
       "opt_val": "8000",
       "opt_vals": []
     },
     "DOWNLOAD_PATH": {
       "opt_name": "DOWNLOAD_PATH",
-      "opt_desc": "The path to download the payload from, eg. /payload",
+      "opt_desc": "The path to download the payload from (HTTP only), eg. /payload",
       "opt_val": "/",
       "opt_vals": []
     },
