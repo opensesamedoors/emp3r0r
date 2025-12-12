@@ -58,27 +58,11 @@ func agent_main() {
 	}
 
 	replace_agent = os.Getenv("REPLACE_AGENT") == "true"
-	// self delete or not
-	persistence := os.Getenv("PERSISTENCE") == "true"
-	// are we running as a library? Either from stager.so or CGO library
-	is_dll := IsDLL() || os.Getenv("LD") == "true"
-	if is_dll {
-		// we don't want to delete the process executable if we are just a DLL
-		persistence = true
-	}
+	// Check if we're running as a library (CGO build)
+	is_dll := IsDLL()
 
-	renameProcessIfNeeded(persistence, is_dll)
 	exe_path := util.ProcExePath(os.Getpid())
 	daemonizeIfNeeded(verbose, is_dll, exe_path)
-
-	// self delete under Linux
-	self_delete := !is_dll && !persistence && runtime.GOOS == "linux"
-	if self_delete {
-		err = deleteCurrentExecutable()
-		if err != nil {
-			log.Printf("Error removing agent file from disk: %v", err)
-		}
-	}
 
 	// applyRuntimeConfig
 	log.Println("Applying runtime config...")
@@ -316,18 +300,6 @@ func daemonizeIfNeeded(verbose, is_shared_lib bool, exe_path string) {
 	}
 }
 
-func renameProcessIfNeeded(persistent, do_not_touch_argv bool) {
-	log.Println("renameProcessIfNeeded...")
-	if !persistent && !do_not_touch_argv && runtime.GOOS == "linux" {
-		log.Println("Renaming process...")
-		// rename our agent process to make it less suspecious
-		// this does nothing in Windows
-		agentutils.SetProcessName(fmt.Sprintf("[kworker/%d:%d-events]",
-			util.RandInt(1, 20),
-			util.RandInt(0, 6)))
-	}
-}
-
 func setupEnvironment() {
 	log.Println("setupEnvironment...")
 	u, err := user.Current()
@@ -358,22 +330,4 @@ func cleanUpDownloadingFiles() {
 	if err != nil {
 		log.Printf("Cleaning up *.downloading: %v", err)
 	}
-}
-
-func deleteCurrentExecutable() error {
-	log.Println("deleteCurrentExecutable...")
-	selfPath, err := os.Executable()
-	if err != nil {
-		return fmt.Errorf("failed to get executable path: %v", err)
-	}
-
-	if runtime.GOOS == "windows" {
-		return nil // not implemented and not needed
-	} else {
-		err = os.Remove(selfPath)
-		if err != nil {
-			return fmt.Errorf("failed to delete executable on Linux: %v", err)
-		}
-	}
-	return nil
 }

@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <sys/random.h>
 #include <sys/types.h>
 #include <sys/user.h>
 #include <sys/wait.h>
@@ -18,6 +19,12 @@
 #endif
 
 #include "elf_loader.h"
+
+#ifdef DEBUG
+#define DEBUG_PERROR(msg) perror(msg)
+#else
+#define DEBUG_PERROR(msg) // Do nothing in release builds
+#endif
 
 // Declare the jump_start function for all architectures
 void jump_start(void *init, void *exit_func, void *entry);
@@ -82,11 +89,8 @@ static void _exit_func(int code) {
 }
 
 static void _get_rand(char *buf, int size) {
-  int fd = open("/dev/urandom", O_RDONLY, 0);
-
-  ssize_t result = read(fd, (unsigned char *)buf, size);
+  ssize_t result = getrandom(buf, size, 0);
   (void)result; // Suppress unused result warning
-  close(fd);
 }
 
 static char *_get_interp(char *buf) {
@@ -275,7 +279,7 @@ int elf_run(void *buf, char **argv, char **env) {
     envc++;
 
   // Allocate some stack space
-  void *stack = mmap(0, STACK_SIZE, PROT_READ | PROT_WRITE | PROT_EXEC,
+  void *stack = mmap(0, STACK_SIZE, PROT_READ | PROT_WRITE,
                      MAP_PRIVATE | MAP_ANON, -1, 0);
 
   // Map the ELF in memory
@@ -435,13 +439,13 @@ char *elf_fork_run(void *buf, char **argv, char **env) {
   // Create a pipe
   int pipefd[2];
   if (pipe(pipefd) == -1) {
-    perror("pipe");
+    DEBUG_PERROR("pipe");
     return "pipe failed";
   }
 
   int pid = fork();
   if (pid == -1) {
-    perror("fork");
+    DEBUG_PERROR("fork");
     return "fork failed";
   }
 
@@ -457,7 +461,7 @@ char *elf_fork_run(void *buf, char **argv, char **env) {
     close(pipefd[1]);
     // int res = execve(path, argv, env);
     int res = elf_run(buf, argv, env);
-    perror("elf_run");
+    DEBUG_PERROR("elf_run");
     exit(EXIT_FAILURE);
   }
 
@@ -469,7 +473,7 @@ char *elf_fork_run(void *buf, char **argv, char **env) {
   size_t total_size = 0;
   char *buffer = malloc(buffer_size);
   if (!buffer) {
-    perror("malloc");
+    DEBUG_PERROR("malloc");
     close(pipefd[0]);
     return "malloc failed";
   }
@@ -484,7 +488,7 @@ char *elf_fork_run(void *buf, char **argv, char **env) {
       buffer_size *= 2;
       buffer = realloc(buffer, buffer_size);
       if (!buffer) {
-        perror("realloc");
+        DEBUG_PERROR("realloc");
         close(pipefd[0]);
         return "realloc failed";
       }
