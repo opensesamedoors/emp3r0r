@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <sys/random.h>
 #include <sys/types.h>
 #include <sys/user.h>
 #include <sys/wait.h>
@@ -304,7 +305,8 @@ int elf_run(void *buf, char **argv, char **env) {
   /*   int size = lseek(f, 0, SEEK_END); */
   /*   lseek(f, 0, SEEK_SET); */
 
-  /*   void *elf_ld = mmap(0, ROUND_UP(size, PAGE_SIZE), PROT_READ | PROT_WRITE, */
+  /*   void *elf_ld = mmap(0, ROUND_UP(size, PAGE_SIZE), PROT_READ | PROT_WRITE,
+   */
   /*                       MAP_PRIVATE | MAP_ANON, -1, 0); */
 
   /*   ssize_t result = read(f, elf_ld, size); */
