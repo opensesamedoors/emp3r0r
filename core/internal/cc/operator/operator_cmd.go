@@ -172,29 +172,33 @@ func msgTunHandler() {
 		decoder := json.NewDecoder(bufio.NewReader(conn))
 
 		// Channel to receive decode results
-		msgCh := make(chan *def.MsgTunData, 1)
+		msgCh := make(chan *def.MsgTunData, 10)
 		errCh := make(chan error, 1)
 
-		// Keep reading messages from the tunnel
-		connectionBroken := false
-		for ctx.Err() == nil {
-			// Read with timeout using goroutine
-			go func() {
+		// Single goroutine to continuously read messages
+		go func() {
+			for {
 				msg := new(def.MsgTunData)
 				if err := decoder.Decode(msg); err != nil {
 					errCh <- err
 					return
 				}
 				msgCh <- msg
-			}()
+			}
+		}()
 
-			// Wait for message or timeout
+		// Keep reading messages from the tunnel
+		connectionBroken := false
+		readTimeout := time.NewTimer(10 * time.Minute)
+
+		for ctx.Err() == nil {
 			select {
 			case msg := <-msgCh:
 				logging.Debugf("Message tunnel got: %v", *msg)
 				processAgentData(msg)
-				// Reset retry delay on successful message
+				// Reset retry delay and timeout on successful message
 				retryDelay = 5 * time.Second
+				readTimeout.Reset(10 * time.Minute)
 			case err := <-errCh:
 				if errors.Is(err, io.EOF) {
 					logging.Warningf("Message tunnel closed")
@@ -203,7 +207,7 @@ func msgTunHandler() {
 				}
 				connectionBroken = true
 				goto reconnect
-			case <-time.After(2 * time.Minute):
+			case <-readTimeout.C:
 				logging.Warningf("Message tunnel read timeout, reconnecting")
 				connectionBroken = true
 				goto reconnect
@@ -214,6 +218,7 @@ func msgTunHandler() {
 		}
 
 	reconnect:
+		readTimeout.Stop()
 		cancel()
 		conn.Close()
 
