@@ -72,42 +72,42 @@ Use the `generate` command from within the emp3r0r shell interface to create cus
 
 #### OpSec Safety & File Operations
 
-- Warns before modules write to disk, so you avoid noisy actions.
-- Leaves almost no footprint until work begins, keeping hosts clean.
-- Uniform file handling makes dropped artifacts predictable and low-profile.
-- Temporary artifacts stay generic to blend into the system.
+- **Warn-before-write** to avoid noisy actions on disk.
+- **Minimal footprint** until work begins, keeping hosts clean.
+- **Consistent artifacts** via uniform file handling for predictable, low-profile drops.
+- **Generic temps** to blend into the system.
 
 #### Advanced Process Hiding
 
-- Obfuscates process names and hides helper files/IDs to lower visibility.
-- Anti-debug/analysis countermeasures make inspection harder.
+- **Obfuscated processes** and hidden helpers to lower visibility.
+- **Anti-debug/analysis** measures to make inspection harder.
 
 #### Secure Command & Control
 
-- JA3-evasive HTTP2/TLS plus WireGuard+mTLS keeps operator access locked down.
-- KCP delivers fast, resilient links; TOR/CDN proxies give extra cover.
+- **JA3-evasive HTTP2/TLS + WireGuard+mTLS** keeps operator access locked down.
+- **KCP for speed/resilience**; **TOR/CDN** for extra cover.
 
 ### Operator Experience
 
 #### Professional CLI Interface
 
-- Built on console and cobra frameworks for robust command handling.
-- Intelligent auto-completion with syntax highlighting.
-- Native tmux integration for parallel operations.
-- **ByoS (Bring Your Own Shell)**: Full `elvish` shell compatibility.
+- **Console + Cobra core** for robust command handling.
+- **Intelligent auto-completion** with syntax highlighting.
+- **Native tmux integration** for parallel operations.
+- **BYOS (Bring Your Own Shell)**: SSH-based reverse PTY that drives any shell available on the target (bash, zsh, sh, python REPL, etc.) over the same tunnel you also reuse for the file manager and transfers.
 
 #### Advanced Shell Integration
 
-- SSH with full PTY support for native terminal experience.
-- Windows compatibility with standard OpenSSH clients.
-- SFTP integration for efficient remote file operations.
+- **SSH PTY** for native terminal experience.
+- **Windows-compatible** with standard OpenSSH clients.
+- **SFTP integration** for efficient remote file operations.
 
 #### File Transfer System
 
 - **Bidirectional Transfer**: Upload files to agents (`put`) and download from agents (`get`) with intuitive commands.
 - **Recursive Downloads**: Download entire directories with `--recursive` flag and filter files using regex patterns (`--regex`).
 - **Smart Transfer Strategy**: Agents can fetch files from peer agents via encrypted KCP tunnels before falling back to C2, improving speed and stealth.
-- **Integrity & Reliability**: SHA256 checksum verification ensures file integrity; resume support allows interrupted transfers to continue from the last offset.
+- **Integrity & Reliability**: SHA256 verification plus **resumable uploads/downloads** so interrupted transfers continue from the last offset.
 - **Real-Time Monitoring**: Progress bars display transfer speed, completion percentage, and estimated time remaining.
 - **Compression**: Zstandard compression reduces bandwidth usage and accelerates transfers.
 - **FileServer Module**: Agents can host an encrypted HTTP server to share files with other agents, enabling peer-to-peer distribution.
