@@ -445,7 +445,9 @@ var Modules = map[string]*ModuleConfig{
 			},
 			"listener": &ModOption{
 				Name: "listener",
-				Desc: "Listener type, eg. http_bare, http_aes_compressed",
+				Desc: "Listener type: http_aes_compressed, tcp_aes_compressed, udp_aes_compressed",
+				Val:  "http_aes_compressed",
+				Vals: []string{"http_aes_compressed", "tcp_aes_compressed", "udp_aes_compressed"},
 			},
 			"port": &ModOption{
 				Name: "port",

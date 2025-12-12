@@ -302,10 +302,17 @@ func runListener(cmd *cobra.Command, args []string) {
 		go func() {
 			errChan <- listener.HTTPAESCompressedListener(payload, port, passphrase, compression == "on")
 		}()
-	case "http_bare":
+	case "tcp_aes_compressed":
 		go func() {
-			errChan <- listener.HTTPBareListener(payload, port)
+			errChan <- listener.TCPAESCompressedListener(payload, port, passphrase, compression == "on")
 		}()
+	case "udp_aes_compressed":
+		go func() {
+			errChan <- listener.UDPAESCompressedListener(payload, port, passphrase, compression == "on")
+		}()
+	default:
+		c2transport.C2RespPrintf(cmd, "Error: unknown listener type '%s'\n", listenerType)
+		return
 	}
 	select {
 	case err := <-errChan:

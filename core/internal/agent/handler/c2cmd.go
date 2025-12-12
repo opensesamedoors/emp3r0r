@@ -152,7 +152,7 @@ func C2Commands() *cobra.Command {
 		GroupID: "generic",
 		Run:     runListener,
 	}
-	listenerCmd.Flags().StringP("listener", "l", "http_aes_compressed", "Listener type")
+	listenerCmd.Flags().StringP("listener", "l", "http_aes_compressed", "Listener type: http_aes_compressed, tcp_aes_compressed, udp_aes_compressed")
 	listenerCmd.Flags().StringP("port", "p", "8000", "Port")
 	listenerCmd.Flags().StringP("payload", "P", "", "Payload")
 	listenerCmd.Flags().StringP("compression", "c", "on", "Compression (on/off)")
