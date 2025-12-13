@@ -206,6 +206,14 @@ int elf_load(char *elf_start, void *stack, int stack_size, size_t *base_addr,
     memcpy((void *)base + phdr[x].p_vaddr, elf_start + phdr[x].p_offset,
            phdr[x].p_filesz);
 
+    // Wipe ELF header if it's in this segment
+    if (phdr[x].p_offset == 0) {
+      size_t wipe_size = sizeof(Elf_Ehdr);
+      if (hdr->e_phoff < wipe_size)
+        wipe_size = hdr->e_phoff;
+      memset((void *)base + phdr[x].p_vaddr, 0, wipe_size);
+    }
+
     // Zero-out BSS, if it exists
     if (phdr[x].p_memsz > phdr[x].p_filesz)
       memset((void *)(base + phdr[x].p_vaddr + phdr[x].p_filesz), 0,
