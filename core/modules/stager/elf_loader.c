@@ -95,23 +95,6 @@ static void _get_rand(char *buf, int size) {
   (void)result; // Suppress unused result warning
 }
 
-static char *_get_interp(char *buf) {
-  int x;
-
-  // Check for the existence of a dynamic loader
-  Elf_Ehdr *hdr = (Elf_Ehdr *)buf;
-  Elf_Phdr *phdr = (Elf_Phdr *)(buf + hdr->e_phoff);
-
-  for (x = 0; x < hdr->e_phnum; x++) {
-    if (phdr[x].p_type == PT_INTERP) {
-      // There is a dynamic loader present, so load it
-      return buf + phdr[x].p_offset;
-    }
-  }
-
-  return NULL;
-}
-
 static Elf_Shdr *_get_section(char *name, void *elf_start) {
   int x;
   Elf_Ehdr *ehdr = NULL;
