@@ -221,7 +221,7 @@ int elf_load(char *elf_start, void *stack, int stack_size, size_t *base_addr,
       size_t wipe_size = sizeof(Elf_Ehdr);
       if (hdr->e_phoff < wipe_size)
         wipe_size = hdr->e_phoff;
-      memset((void *)base + phdr[x].p_vaddr, 0, wipe_size);
+      _get_rand((char *)base + phdr[x].p_vaddr, wipe_size);
     }
 
     // Zero-out BSS, if it exists
