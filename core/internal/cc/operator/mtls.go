@@ -46,6 +46,8 @@ func createMTLSHttpClient() (*http.Client, error) {
 	// Create HTTP/2 transport
 	transport := &http2.Transport{
 		TLSClientConfig: tlsConfig,
+		ReadIdleTimeout: 10 * time.Second, // Send PING if idle for 10s
+		PingTimeout:     5 * time.Second,  // Timeout if PING response not received in 5s
 	}
 
 	// Create HTTP client with timeout
