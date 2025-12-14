@@ -31,23 +31,20 @@ CFLAGS += -DENCODED_KEY="$(XOR_KEY)"
 CFLAGS += -DCONFIG_XOR_KEY=$(XOR_KEY_VALUE)
 
 SRCS = main.c utils.c aes.c elf_loader.c tinflate.c
-OBJS = $(SRCS:.c=.o)
 TARGET = stager
 SHELLCODE = stager.bin
 
+.PHONY: all clean $(TARGET)
+
 all: $(TARGET) $(SHELLCODE)
 
-$(TARGET): $(OBJS)
-	$(CC) $(LDFLAGS) -o $@ $(OBJS)
+$(TARGET):
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(SRCS)
 
 $(SHELLCODE): $(TARGET)
 	objcopy -O binary -j .text -j .rodata -j .data $(TARGET) $@
 	@echo "Shellcode generated at $(PWD)/$@"
 
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
-
 clean:
-	rm -f $(OBJS) $(TARGET) $(SHELLCODE)
+	rm -f $(TARGET) $(SHELLCODE)
 
-.PHONY: all clean
