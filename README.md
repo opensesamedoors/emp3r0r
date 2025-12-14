@@ -81,6 +81,7 @@ Use the `generate` command from within the emp3r0r shell interface to create cus
 
 - **Obfuscated processes** and hidden helpers to lower visibility.
 - **Anti-debug/analysis** measures to make inspection harder.
+- **sRDI-like Shellcode Stager**: Load ELF binaries from memory without touching disk, similar to sRDI for Windows.
 
 #### Secure Command & Control
 
