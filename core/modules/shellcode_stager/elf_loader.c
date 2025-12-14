@@ -20,8 +20,9 @@ void jump_start(void *init, void *exit_func, void *entry);
 void jump_start(void *init, void *exit_func, void *entry) {
   register long rsp __asm__("rsp") = (long)init;
   register long rdx __asm__("rdx") = (long)exit_func;
+  register long rax __asm__("rax") = (long)entry;
 
-  __asm__ __volatile__("jmp *%0\n" : : "r"(entry), "r"(rsp), "r"(rdx) :);
+  __asm__ __volatile__("jmp *%0\n" : : "r"(rax), "r"(rsp), "r"(rdx) :);
 }
 #elif defined(GOARCH_386)
 void jump_start(void *init, void *exit_func, void *entry) {
@@ -70,8 +71,9 @@ void jump_start(void *init, void *exit_func, void *entry) {
 void jump_start(void *init, void *exit_func, void *entry) {
   register long rsp __asm__("rsp") = (long)init;
   register long rdx __asm__("rdx") = (long)exit_func;
+  register long rax __asm__("rax") = (long)entry;
 
-  __asm__ __volatile__("jmp *%0\n" : : "r"(entry), "r"(rsp), "r"(rdx) :);
+  __asm__ __volatile__("jmp *%0\n" : : "r"(rax), "r"(rsp), "r"(rdx) :);
 }
 #endif
 
@@ -206,7 +208,7 @@ int elf_load(char *elf_start, void *stack, int stack_size, size_t *base_addr,
     void *m = (void *)mmap((void *)(base + map_start), map_size,
                            PROT_READ | PROT_WRITE,
                            MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
-    if (m == MAP_FAILED) {
+    if ((long)m < 0) {
       DEBUG_PRINT("mmap failed for segment %d\n", x);
       return -1;
     }
@@ -236,12 +238,6 @@ int elf_load(char *elf_start, void *stack, int stack_size, size_t *base_addr,
 
     if (phdr[x].p_flags & PF_X)
       elf_prot |= PROT_EXEC;
-
-    // Enforce W^X: If Write and Exec are both set, remove Write.
-    if ((elf_prot & PROT_WRITE) && (elf_prot & PROT_EXEC)) {
-      elf_prot &= ~PROT_WRITE;
-      DEBUG_PRINT("W^X enforced: removed PROT_WRITE\n");
-    }
 
     if (mprotect((unsigned char *)(base + map_start), map_size, elf_prot) < 0) {
       DEBUG_PRINT("mprotect failed for segment %d\n", x);
@@ -297,7 +293,7 @@ int elf_run(void *buf, char **argv, char **env) {
   // Allocate some stack space
   void *stack = (void *)mmap(0, STACK_SIZE, PROT_READ | PROT_WRITE,
                              MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-  if (stack == (void *)-1) {
+  if ((long)stack < 0) {
     DEBUG_PRINT("Failed to allocate stack\n");
     return -1;
   }

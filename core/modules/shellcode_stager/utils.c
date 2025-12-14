@@ -3,51 +3,48 @@
 #include <stdarg.h>
 
 // -----------------------------------------------------------------------------
-// Memory Management (Simple Bump Allocator with Size Tracking)
+// Memory Management (Stateless mmap-based allocator)
 // -----------------------------------------------------------------------------
-
-#define HEAP_SIZE (128 * 1024 * 1024) // 128 MB heap
-
-static uint8_t *heap_start = NULL;
-static size_t heap_offset = 0;
 
 void *malloc(size_t size) {
   if (size == 0)
     return NULL;
 
-  if (heap_start == NULL) {
-    // Initialize heap
-    long ret = syscall6(SYS_mmap, 0, HEAP_SIZE, PROT_READ | PROT_WRITE,
-                        MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-    if (ret < 0)
-      return NULL; // Failed
-    heap_start = (uint8_t *)ret;
-  }
+  // Allocate size + metadata (size_t)
+  size_t total_size = size + sizeof(size_t);
 
-  size_t actual_size = size + sizeof(size_t);
-  if (heap_offset + actual_size > HEAP_SIZE) {
-    return NULL; // OOM
-  }
+  // Round up to page size (4096) to be nice to the kernel, though mmap does
+  // this anyway But we need to know the exact size we asked for to unmap it
+  // later? Actually, munmap requires the length. If we store the user size, we
+  // can calculate total_size. But mmap operates on pages.
 
-  void *ptr = heap_start + heap_offset;
-  *(size_t *)ptr = size; // Store size
-  heap_offset += actual_size;
+  long ret = syscall6(SYS_mmap, 0, total_size, PROT_READ | PROT_WRITE,
+                      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
-  // Align to 8 bytes
-  if (heap_offset % 8 != 0) {
-    heap_offset += 8 - (heap_offset % 8);
-  }
+  if (ret < 0) // Check for error (negative value)
+    return NULL;
+
+  void *ptr = (void *)ret;
+  *(size_t *)ptr = size; // Store the requested size
 
   return (uint8_t *)ptr + sizeof(size_t);
 }
 
 void free(void *ptr) {
-  // No-op for stager
-  (void)ptr;
+  if (!ptr)
+    return;
+
+  uint8_t *real_ptr = (uint8_t *)ptr - sizeof(size_t);
+  size_t size = *(size_t *)real_ptr;
+  size_t total_size = size + sizeof(size_t);
+
+  syscall2(SYS_munmap, (long)real_ptr, total_size);
 }
 
 void *calloc(size_t nmemb, size_t size) {
   size_t total = nmemb * size;
+  // mmap returns zeroed memory, so we don't strictly need memset,
+  // but to be safe and standard compliant (if we switch allocator later):
   void *ptr = malloc(total);
   if (ptr) {
     memset(ptr, 0, total);
@@ -65,29 +62,9 @@ void *realloc(void *ptr, size_t size) {
 
   uint8_t *real_ptr = (uint8_t *)ptr - sizeof(size_t);
   size_t old_size = *(size_t *)real_ptr;
-  size_t old_actual_size = old_size + sizeof(size_t);
 
-  // Check if we can extend the current chunk
-  size_t current_offset = (size_t)(real_ptr - heap_start);
-  size_t expected_end = current_offset + old_actual_size;
-  if (expected_end % 8 != 0) {
-    expected_end += 8 - (expected_end % 8);
-  }
-
-  if (expected_end == heap_offset) {
-    // This is the last chunk, try to extend
-    size_t new_actual_size = size + sizeof(size_t);
-    size_t new_end = current_offset + new_actual_size;
-    if (new_end % 8 != 0) {
-      new_end += 8 - (new_end % 8);
-    }
-
-    if (new_end <= HEAP_SIZE) {
-      *(size_t *)real_ptr = size;
-      heap_offset = new_end;
-      return ptr;
-    }
-  }
+  // If new size is smaller, we could just shrink, but mmap doesn't support
+  // shrinking easily without mremap. For simplicity, we'll alloc new and copy.
 
   void *new_ptr = malloc(size);
   if (!new_ptr)
@@ -95,6 +72,8 @@ void *realloc(void *ptr, size_t size) {
 
   size_t copy_size = old_size < size ? old_size : size;
   memcpy(new_ptr, ptr, copy_size);
+
+  free(ptr);
 
   return new_ptr;
 }
