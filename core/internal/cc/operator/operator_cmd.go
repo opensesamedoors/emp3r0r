@@ -199,26 +199,20 @@ func msgTunHandler() {
 
 		// Keep reading messages from the tunnel
 		connectionBroken := false
-		readTimeout := time.NewTimer(10 * time.Minute)
 
 		for ctx.Err() == nil {
 			select {
 			case msg := <-msgCh:
 				logging.Debugf("Message tunnel got: %v", *msg)
 				processAgentData(msg)
-				// Reset retry delay and timeout on successful message
+				// Reset retry delay on successful message
 				retryDelay = 5 * time.Second
-				readTimeout.Reset(10 * time.Minute)
 			case err := <-errCh:
 				if errors.Is(err, io.EOF) {
 					logging.Warningf("Message tunnel closed")
 				} else {
 					logging.Errorf("Failed to decode message: %v", err)
 				}
-				connectionBroken = true
-				goto reconnect
-			case <-readTimeout.C:
-				logging.Warningf("Message tunnel read timeout, reconnecting")
 				connectionBroken = true
 				goto reconnect
 			case <-ctx.Done():
@@ -228,7 +222,6 @@ func msgTunHandler() {
 		}
 
 	reconnect:
-		readTimeout.Stop()
 		cancel()
 		conn.Close()
 
